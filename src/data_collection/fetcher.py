@@ -5,7 +5,9 @@ import pandas as pd
 class DataFetcher:
 
     def __init__(self):
-        self.exchange = ccxt.binance()
+        self.exchange = ccxt.binance({
+            "enableRateLimit": True
+        })
 
     def fetch(self, symbol="BTC/USDT", timeframe="5m", limit=500):
 
@@ -17,10 +19,18 @@ class DataFetcher:
 
         df = pd.DataFrame(
             ohlcv,
-            columns=["timestamp", "open", "high", "low", "close", "volume"]
+            columns=[
+                "timestamp",
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume"
+            ]
         )
 
         df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
+
         df.set_index("timestamp", inplace=True)
 
         return df
