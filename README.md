@@ -26,4 +26,9 @@ Backend → FastAPI ML API
 Data → Binance + ML pipeline
 
 Goal:
-Build a research-grade quant trading platform similar to hedge-fund tools
+Build a research-grade quant trading platform similar to hedge-fund tools    
+************backend************
+https://vision-ai-5qm1.onrender.com/    
+
+**********frontend********
+https://vision-ai-omega-umber.vercel.app/
