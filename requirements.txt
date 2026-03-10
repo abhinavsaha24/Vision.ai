@@ -70,4 +70,9 @@ passlib[bcrypt]
 python-jose
 email-validator
 ccxt
-
+pandas
+numpy
+scikit-learn
+fastapi
+uvicorn
+websockets
