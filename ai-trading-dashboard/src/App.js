@@ -21,7 +21,7 @@ import PnLDashboard from "./PnLDashboard";
 
 function App() {
 
-const API = process.env.REACT_APP_API || "https://vision-ai-5qm1.onrender.com/";
+const API = process.env.REACT_APP_API || "https://vision-ai-omega-umber.vercel.app";
 
 /* ---------------- STATES ---------------- */
 
