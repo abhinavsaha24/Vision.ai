@@ -69,4 +69,5 @@ setuptools
 passlib[bcrypt]
 python-jose
 email-validator
+ccxt
 
