@@ -7,26 +7,30 @@ function Watchlist() {
   const [prices, setPrices] = useState({});
 
   const loadPrices = async () => {
-    try {
 
-      const updated = {};
+  try {
 
-      for (const asset of assets) {
+    const requests = assets.map(asset =>
+      axios.get(`https://api.binance.com/api/v3/ticker/price?symbol=${asset}`)
+    );
 
-        const res = await axios.get(
-          `https://api.binance.com/api/v3/ticker/price?symbol=${asset}`
-        );
+    const responses = await Promise.all(requests);
 
-        updated[asset] = res.data.price;
+    const updated = {};
 
-      }
+    responses.forEach((r, i) => {
+      updated[assets[i]] = r.data.price;
+    });
 
-      setPrices(updated);
+    setPrices(updated);
 
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  } catch(err) {
+
+    console.error(err);
+
+  }
+
+};
 
   useEffect(() => {
 

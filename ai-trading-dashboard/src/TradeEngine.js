@@ -4,7 +4,7 @@ export function executeTrade(prediction, price, portfolio) {
 
   const newPortfolio = { ...portfolio };
 
-  const tradeSize = 0.01;
+  const tradeSize = portfolio.cash * 0.01 / price;
 
   if (prediction.direction === "UP") {
 

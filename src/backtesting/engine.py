@@ -1,36 +1,43 @@
 """
-Backtesting engine: runs strategy with discrete signals (1=long, -1=short, 0=hold)
-and returns performance plus equity curve and trade PnLs for metrics.
+Backtesting engine for discrete signals (1=long, -1=short, 0=flat).
+Produces trades, equity curve, and performance metrics.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List
 
 import numpy as np
 import pandas as pd
 
+
+# ------------------------------------------------
+# Convert probabilities to signals
+# ------------------------------------------------
 
 def probabilities_to_signals(
     proba: np.ndarray,
     long_threshold: float = 0.55,
     short_threshold: float = 0.45,
 ) -> np.ndarray:
-    """
-    Convert ensemble P(class=1) to trading signals.
-    proba >= long_threshold -> 1 (long), proba <= short_threshold -> -1 (short), else 0.
-    """
+
     proba = np.asarray(proba).ravel()
-    signals = np.zeros(len(proba), dtype=np.float64)
+
+    signals = np.zeros(len(proba))
+
     signals[proba >= long_threshold] = 1
     signals[proba <= short_threshold] = -1
+
     return signals
 
 
+# ------------------------------------------------
+# Trade object
+# ------------------------------------------------
+
 @dataclass
 class Trade:
-    """Single closed trade."""
 
     entry_date: str
     exit_date: str
@@ -41,161 +48,187 @@ class Trade:
     pnl_pct: float
 
 
+# ------------------------------------------------
+# Backtest result
+# ------------------------------------------------
+
 @dataclass
 class BacktestResult:
-    """Backtest output: metrics, trades, equity curve and trade PnLs for reporting."""
 
     total_return: float
     sharpe_ratio: float
     max_drawdown: float
     win_rate: float
+    profit_factor: float
     num_trades: int
+
     trades: List[Trade] = field(default_factory=list)
     equity_curve: np.ndarray = field(default_factory=lambda: np.array([]))
     trades_pnl: np.ndarray = field(default_factory=lambda: np.array([]))
 
 
+# ------------------------------------------------
+# Backtest engine
+# ------------------------------------------------
+
 class BacktestEngine:
-    """Event-style backtester: signals 1=long, -1=short, 0=no position."""
 
     def __init__(
         self,
-        initial_capital: float = 100_000.0,
+        initial_capital: float = 100000.0,
         commission_pct: float = 0.001,
         position_size_pct: float = 1.0,
-    ) -> None:
+    ):
+
         self.initial_capital = initial_capital
         self.commission_pct = commission_pct
         self.position_size_pct = position_size_pct
 
-    def run(
-        self,
-        df: pd.DataFrame,
-        signals: np.ndarray,
-        price_col: str = "close",
-    ) -> BacktestResult:
-        """
-        Run backtest. signals: 1=long, -1=short, 0=hold.
-        Returns BacktestResult with equity_curve and trades_pnl for compute_trading_metrics.
-        """
+
+    def run(self, df: pd.DataFrame, signals: np.ndarray, price_col="close"):
+
         df = df.copy()
-        sig = np.asarray(signals, dtype=float).ravel()[: len(df)]
-        df["Signal"] = np.pad(sig, (0, max(0, len(df) - len(sig))), constant_values=0)
-        df["Returns"] = df[price_col].astype(float).pct_change().fillna(0)
+
+        signals = np.asarray(signals).ravel()
+
+        # align signals with dataframe
+        df["Signal"] = np.pad(signals, (0, max(0, len(df) - len(signals))))[:len(df)]
+
+        df["Returns"] = df[price_col].pct_change().fillna(0)
 
         capital = self.initial_capital
-        position = 0.0
+        position = 0
+
+        entry_price = None
+        entry_date = None
+
+        equity_curve = [capital]
         trades: List[Trade] = []
-        equity_curve: List[float] = [capital]
 
         for i in range(1, len(df)):
-            prev_signal = df["Signal"].iloc[i - 1]
-            curr_signal = df["Signal"].iloc[i]
+
+            signal = df["Signal"].iloc[i]
             price = float(df[price_col].iloc[i])
-            prev_price = float(df[price_col].iloc[i - 1])
-            date_str = str(df.index[i])[:10]
+            date = str(df.index[i])[:10]
 
-            if prev_signal != curr_signal:
-                if prev_signal != 0:
-                    exit_price = prev_price
-                    pnl_pct = (price / exit_price - 1.0) * prev_signal
-                    pnl = position * pnl_pct - abs(position) * self.commission_pct * 2.0
-                    capital += pnl
-                    trades.append(
-                        Trade(
-                            entry_date="",
-                            exit_date=date_str,
-                            entry_price=exit_price,
-                            exit_price=price,
-                            side="long" if prev_signal > 0 else "short",
-                            pnl=pnl,
-                            pnl_pct=pnl_pct * 100.0,
-                        )
+            # close position
+            if position != 0 and signal != position:
+
+                pnl_pct = (price - entry_price) / entry_price * position
+
+                pnl = capital * self.position_size_pct * pnl_pct
+
+                pnl -= abs(pnl) * self.commission_pct
+
+                capital += pnl
+
+                trades.append(
+                    Trade(
+                        entry_date=entry_date,
+                        exit_date=date,
+                        entry_price=entry_price,
+                        exit_price=price,
+                        side="long" if position > 0 else "short",
+                        pnl=pnl,
+                        pnl_pct=pnl_pct * 100,
                     )
-                    position = 0.0
+                )
 
-                if curr_signal != 0:
-                    position = capital * self.position_size_pct * curr_signal
-                    capital -= abs(position) * self.commission_pct
+                position = 0
+                entry_price = None
+                entry_date = None
 
+            # open new position
+            if position == 0 and signal != 0:
+
+                position = signal
+                entry_price = price
+                entry_date = date
+
+                capital -= capital * self.commission_pct
+
+            # update equity
             if position != 0:
-                ret = df["Returns"].iloc[i]
-                capital += position * ret
-                position *= 1.0 + ret
+
+                ret = df["Returns"].iloc[i] * position
+
+                capital *= (1 + ret)
 
             equity_curve.append(capital)
 
-        if position != 0:
-            last_ret = (df[price_col].iloc[-1] / df[price_col].iloc[-2] - 1.0) * np.sign(position)
-            capital += position * last_ret
-
         equity = np.array(equity_curve)
-        returns = np.diff(equity) / (equity[:-1] + 1e-12)
-        returns = returns[~np.isnan(returns)]
 
-        total_return = (capital - self.initial_capital) / self.initial_capital
+        returns = np.diff(equity) / (equity[:-1] + 1e-12)
+
+        # Sharpe ratio (5-minute candles)
+        periods_per_year = 365 * 24 * 12
+
         sharpe = (
-            float(np.mean(returns) / np.std(returns) * np.sqrt(252))
-            if len(returns) > 0 and np.std(returns) > 0
-            else 0.0
+            float(np.mean(returns) / (np.std(returns) + 1e-12) * np.sqrt(periods_per_year))
+            if len(returns) > 0
+            else 0
         )
+
+        total_return = (equity[-1] - self.initial_capital) / self.initial_capital
+
         cummax = np.maximum.accumulate(equity)
-        drawdowns = (equity - cummax) / (cummax + 1e-12)
-        max_dd = float(np.min(drawdowns)) if len(drawdowns) > 0 else 0.0
+
+        drawdown = (equity - cummax) / cummax
+
+        max_dd = float(drawdown.min())
+
         wins = [t for t in trades if t.pnl > 0]
-        win_rate = len(wins) / len(trades) if trades else 0.0
+
+        win_rate = len(wins) / len(trades) if trades else 0
+
         trades_pnl = np.array([t.pnl for t in trades])
+
+        gross_profit = trades_pnl[trades_pnl > 0].sum() if len(trades_pnl) else 0
+        gross_loss = abs(trades_pnl[trades_pnl < 0].sum()) if len(trades_pnl) else 0
+
+        profit_factor = gross_profit / gross_loss if gross_loss > 0 else 0
 
         return BacktestResult(
             total_return=total_return,
             sharpe_ratio=sharpe,
             max_drawdown=max_dd,
             win_rate=win_rate,
+            profit_factor=profit_factor,
             num_trades=len(trades),
             trades=trades,
             equity_curve=equity,
             trades_pnl=trades_pnl,
         )
 
-    def run_from_symbol(
-        self,
-        symbol: str,
-        period: str = "1y",
-        price_col: str = "close",
-    ) -> dict:
-        """
-        Fetch data, build features, generate RSI-based signals, run backtest.
-        Kept for API compatibility; pipeline uses model predictions instead.
-        """
-        from src.data_collection.fetcher import DataFetcher
-        from src.feature_engineering.indicators import FeatureEngineer
 
-        fetcher = DataFetcher()
-        df = fetcher.fetch(symbol, period=period)
-        engineer = FeatureEngineer()
-        df = engineer.add_all_indicators(df)
-        df = df.dropna(subset=["Target_Direction"])
-        signals = np.zeros(len(df))
-        if "RSI" in df.columns:
-            signals[df["RSI"] < 30] = 1
-            signals[df["RSI"] > 70] = -1
-        result = self.run(df, signals, price_col=price_col)
-        return {
-            "total_return": result.total_return,
-            "sharpe_ratio": result.sharpe_ratio,
-            "max_drawdown": result.max_drawdown,
-            "win_rate": result.win_rate,
-            "num_trades": result.num_trades,
-            "trades": [
-                {
-                    "entry_date": t.entry_date,
-                    "exit_date": t.exit_date,
-                    "entry_price": t.entry_price,
-                    "exit_price": t.exit_price,
-                    "side": t.side,
-                    "pnl": t.pnl,
-                    "pnl_pct": t.pnl_pct,
-                }
-                for t in result.trades
-            ],
-        }
+def run_from_symbol(self, symbol: str, period: str = "1y", price_col: str = "close"):
+
+    from src.data_collection.fetcher import DataFetcher
+    from src.feature_engineering.indicators import FeatureEngineer
+
+    fetcher = DataFetcher()
+
+    df = fetcher.fetch(symbol)
+
+    engineer = FeatureEngineer()
+
+    df = engineer.add_all_indicators(df)
+
+    df = df.dropna()
+
+    signals = np.zeros(len(df))
+
+    if "RSI" in df.columns:
+        signals[df["RSI"] < 30] = 1
+        signals[df["RSI"] > 70] = -1
+
+    result = self.run(df, signals, price_col)
+
+    return {
+        "total_return": result.total_return,
+        "sharpe_ratio": result.sharpe_ratio,
+        "max_drawdown": result.max_drawdown,
+        "win_rate": result.win_rate,
+        "num_trades": result.num_trades,
+        "trades": [t.__dict__ for t in result.trades],
+    }

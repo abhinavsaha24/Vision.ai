@@ -1,34 +1,40 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 function NewsFeed(){
 
-  const news = [
-    "Bitcoin ETF inflows increasing",
-    "Ethereum gas fees drop to yearly lows",
-    "AI trading bots gaining popularity",
-    "Crypto market volatility rising"
-  ];
+const [news,setNews] = useState([]);
 
-  return (
+useEffect(()=>{
 
-    <div style={{
-      background:"#121212",
-      padding:16,
-      borderRadius:10,
-      border:"1px solid #262626"
-    }}>
+setNews([
+"Bitcoin ETF inflows increasing",
+"Ethereum gas fees drop to yearly lows",
+"AI trading bots gaining popularity",
+"Crypto market volatility rising"
+]);
 
-      <h3>Market News</h3>
+},[]);
 
-      {news.map((n,i)=>(
-        <p key={i} style={{fontSize:13}}>
-          • {n}
-        </p>
-      ))}
+return(
 
-    </div>
+<div style={{
+background:"#121212",
+padding:16,
+borderRadius:10,
+border:"1px solid #262626"
+}}>
 
-  );
+<h3>Market News</h3>
+
+{news.map((n,i)=>(
+<p key={i} style={{fontSize:13}}>
+• {n}
+</p>
+))}
+
+</div>
+
+);
 
 }
 

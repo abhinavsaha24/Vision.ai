@@ -20,7 +20,7 @@ function TradeHistory({ portfolio }) {
 
       {trades.map((t,i)=>(
         <div key={i}>
-          {t.type} BTC @ ${t.price.toFixed(2)}
+          {t.type} {t.size} BTC @ ${t.price.toFixed(2)} — {t.time}
         </div>
       ))}
 

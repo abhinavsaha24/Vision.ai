@@ -36,10 +36,6 @@ function Performance() {
 
       {/* Equity Curve Chart */}
 
-      <div style={{ marginTop: 15 }}>
-        <EquityCurve />
-      </div>
-
     </div>
 
   );

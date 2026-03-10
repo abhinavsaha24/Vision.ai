@@ -2,68 +2,76 @@
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional
 import sys
 from pathlib import Path
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-router = APIRouter(prefix="/predictions", tags=["predictions"])
+router = APIRouter(prefix="/model", tags=["predictions"])
 
+
+# -------- REQUEST MODEL --------
 
 class PredictionRequest(BaseModel):
-    """Request model for predictions."""
-
-    symbol: str = "AAPL"
+    symbol: str = "BTCUSDT"
     horizon: int = 5
 
 
-class PredictionResponse(BaseModel):
-    """Response model for predictions."""
+# -------- RESPONSE MODEL --------
 
+class PredictionResponse(BaseModel):
     symbol: str
     direction: str
     confidence: float
     horizon_days: int
 
 
+# -------- HEALTH CHECK --------
+
 @router.get("/health")
 async def health_check():
-    """Health check endpoint."""
     return {"status": "healthy", "service": "ai-trading-system"}
 
 
-@router.post("/predict", response_model=PredictionResponse)
+# -------- PREDICTION ENDPOINT --------
+
+@router.post("/predict")
 async def get_prediction(request: PredictionRequest):
-    """
-    Get trading prediction for a symbol.
-    Returns direction (BUY/SELL/HOLD) and confidence score.
-    """
+
     try:
-        from src.model_training.trainer import TradingModelTrainer
-        from src.data_collection.fetcher import DataFetcher
-        from src.feature_engineering.indicators import FeatureEngineer
 
-        fetcher = DataFetcher()
-        df = fetcher.fetch(symbol=request.symbol, period="1y")
-        if df is None or df.empty:
-            raise HTTPException(status_code=404, detail=f"No data for {request.symbol}")
+        from src.model_training.trainer import ModelTrainer
 
-        engineer = FeatureEngineer()
-        df = engineer.add_all_indicators(df)
+        trainer = ModelTrainer()
 
-        trainer = TradingModelTrainer()
-        model, _ = trainer.train(df)
-        direction, confidence = trainer.predict(model, df, horizon=request.horizon)
+        # Load trained model
+        trainer.load("trading_model")
 
-        return PredictionResponse(
+        predictions = trainer.predict_from_symbol(
             symbol=request.symbol,
-            direction=direction,
-            confidence=round(confidence, 4),
-            horizon_days=request.horizon,
+            horizon=request.horizon
         )
-    except ImportError as e:
-        raise HTTPException(status_code=503, detail=f"Model not ready: {str(e)}")
+
+        if not predictions:
+            raise HTTPException(
+                status_code=404,
+                detail="No predictions generated"
+            )
+
+        # Return first prediction for API response
+        first = predictions[0]
+
+        return {
+            "symbol": request.symbol,
+            "direction": first["direction"],
+            "confidence": round(float(first["probability"]), 4),
+            "horizon_days": request.horizon
+        }
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )

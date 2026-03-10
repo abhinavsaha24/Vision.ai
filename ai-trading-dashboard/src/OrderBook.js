@@ -2,97 +2,86 @@ import React, { useEffect, useState } from "react";
 
 function OrderBook({ symbol }) {
 
-  const [bids, setBids] = useState([]);
-  const [asks, setAsks] = useState([]);
+const [bids,setBids] = useState([]);
+const [asks,setAsks] = useState([]);
 
-  const symbolMap = {
-    "BTC-USD": "btcusdt",
-    "ETH-USD": "ethusdt",
-    "SOL-USD": "solusdt"
-  };
+useEffect(()=>{
 
-  useEffect(() => {
+let ws;
 
-    const pair = symbolMap[symbol] || "btcusdt";
+const connect = () => {
 
-    const ws = new WebSocket(
-      `wss://stream.binance.com:9443/ws/${pair}@depth20@100ms`
-    );
+ws = new WebSocket(
+`wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@depth20@100ms`
+);
 
-    ws.onmessage = (event) => {
+ws.onmessage = (event)=>{
 
-      const data = JSON.parse(event.data);
+const data = JSON.parse(event.data);
 
-      if (data.bids && data.asks) {
+setBids(data.bids.slice(0,10));
+setAsks(data.asks.slice(0,10));
 
-        setBids(data.bids.slice(0, 10));
-        setAsks(data.asks.slice(0, 10));
+};
 
-      }
+ws.onerror = (err)=>{
+console.log("OrderBook websocket error:",err);
+};
 
-    };
+ws.onclose = ()=>{
+console.log("OrderBook websocket closed — reconnecting...");
+setTimeout(connect,2000);
+};
 
-    return () => ws.close();
+};
 
-  }, [symbol]);
+connect();
 
-  return (
+return ()=>{
+if(ws){
+ws.onclose = null;
+ws.close();
+}
+};
 
-    <div style={{
-      background:"#121212",
-      padding:15,
-      borderRadius:10
-    }}>
+},[symbol]);
+return(
 
-      <h3>Order Book</h3>
+<div>
 
-      <div style={{display:"flex", justifyContent:"space-between"}}>
+<h3>Order Book</h3>
 
-        {/* BIDS */}
+<div style={{display:"flex",gap:20}}>
 
-        <div>
+<div>
 
-          <h4 style={{color:"#00ff9c"}}>Bids</h4>
+<h4>Bids</h4>
 
-          {bids.map((b,i)=>(
+{bids.map((b,i)=>(
+<p key={i} style={{color:"#00ff9c"}}>
+{parseFloat(b[0]).toFixed(2)} ({parseFloat(b[1]).toFixed(4)})
+</p>
+))}
 
-            <div key={i} style={{fontSize:12}}>
+</div>
 
-              {parseFloat(b[0]).toFixed(2)}  
-              {"  "}
-              ({parseFloat(b[1]).toFixed(4)})
+<div>
 
-            </div>
+<h4>Asks</h4>
 
-          ))}
+{asks.map((a,i)=>(
+<p key={i} style={{color:"#ff4d4d"}}>
+{parseFloat(a[0]).toFixed(2)} ({parseFloat(a[1]).toFixed(4)})
+</p>
+))}
 
-        </div>
+</div>
 
-        {/* ASKS */}
+</div>
 
-        <div>
+</div>
 
-          <h4 style={{color:"#ff4d4d"}}>Asks</h4>
-
-          {asks.map((a,i)=>(
-
-            <div key={i} style={{fontSize:12}}>
-
-              {parseFloat(a[0]).toFixed(2)}  
-              {"  "}
-              ({parseFloat(a[1]).toFixed(4)})
-
-            </div>
-
-          ))}
-
-        </div>
-
-      </div>
-
-    </div>
-
-  );
+);
 
 }
 

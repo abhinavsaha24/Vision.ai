@@ -1,87 +1,49 @@
 import React, { useEffect, useRef } from "react";
-import { createChart, LineSeries } from "lightweight-charts";
+import { createChart } from "lightweight-charts";
 
-function EquityCurve({ portfolio, price }) {
+function EquityCurve({ portfolio }) {
 
-  const containerRef = useRef(null);
-  const chartRef = useRef(null);
-  const seriesRef = useRef(null);
-  const historyRef = useRef([]);
+const ref = useRef(null);
 
-  useEffect(() => {
+useEffect(() => {
 
-    if (!containerRef.current) return;
+if (!ref.current) return;
 
-    const chart = createChart(containerRef.current, {
+const chart = createChart(ref.current, {
+height: 200,
+layout: {
+background: { color: "#0f0f0f" },
+textColor: "#DDD"
+},
+grid: {
+vertLines: { color: "#1a1a1a" },
+horzLines: { color: "#1a1a1a" }
+}
+});
 
-      width: containerRef.current.clientWidth,
-      height: 200,
+const lineSeries = chart.addLineSeries({
+color: "#00ff9c",
+lineWidth: 2
+});
 
-      layout:{
-        background:{ color:"#0f0f0f" },
-        textColor:"#DDD"
-      },
+if (portfolio?.history) {
 
-      grid:{
-        vertLines:{ color:"#222" },
-        horzLines:{ color:"#222" }
-      },
+const data = portfolio.history.map((v, i) => ({
+time: i,
+value: v
+}));
 
-      timeScale:{
-        timeVisible:true,
-        secondsVisible:true
-      }
+lineSeries.setData(data);
 
-    });
+}
 
-    const lineSeries = chart.addSeries(LineSeries,{
-      color:"#00ff9c",
-      lineWidth:2
-    });
+return () => {
+chart.remove();
+};
 
-    chartRef.current = chart;
-    seriesRef.current = lineSeries;
+}, [portfolio]);
 
-    const handleResize = () => {
-      chart.applyOptions({
-        width: containerRef.current.clientWidth
-      });
-    };
-
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      chart.remove();
-    };
-
-  }, []);
-
-  /* ---------- UPDATE EQUITY ---------- */
-
-  useEffect(() => {
-
-    if(!portfolio || !price || !seriesRef.current) return;
-
-    const equity = portfolio.cash + portfolio.btc * price;
-
-    const point = {
-      time: Math.floor(Date.now()/1000),
-      value: equity
-    };
-
-    historyRef.current.push(point);
-
-    seriesRef.current.setData(historyRef.current);
-
-  }, [portfolio, price]);
-
-  return (
-    <div
-      ref={containerRef}
-      style={{ width:"100%", marginTop:20 }}
-    />
-  );
+return <div ref={ref} style={{ width: "100%" }}></div>;
 
 }
 

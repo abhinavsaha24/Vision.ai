@@ -5,7 +5,6 @@ import Portfolio from "./Portfolio";
 import Watchlist from "./Watchlist";
 import MarketTimeline from "./MarketTimeline";
 import RiskPanel from "./RiskPanel";
-import MarketStatus from "./MarketStatus";
 import Performance from "./Performance";
 import TradeHistory from "./TradeHistory";
 
@@ -18,24 +17,24 @@ import OrderBook from "./OrderBook";
 import NewsFeed from "./NewsFeed";
 import RiskDashboard from "./RiskDashboard";
 import { executeTrade } from "./TradeEngine";
-import PnLDashboard from "./PnLDashboard"; 
+import PnLDashboard from "./PnLDashboard";
 
 function App() {
 
-const API = "https://vision-ai-1aoe.onrender.com";
+const API = process.env.REACT_APP_API || "https://vision-ai-backend.onrender.com";
 
 /* ---------------- STATES ---------------- */
 
-const [symbol, setSymbol] = useState("BTC-USD");
-const [predictions, setPredictions] = useState([]);
-const [price, setPrice] = useState(null);
-const [time, setTime] = useState(new Date());
+const [symbol,setSymbol] = useState("BTCUSDT");
+const [predictions,setPredictions] = useState([]);
+const [price,setPrice] = useState(null);
+const [time,setTime] = useState(new Date());
 
-const [loadingPred, setLoadingPred] = useState(false);
-const [loadingPrice, setLoadingPrice] = useState(false);
-const [error, setError] = useState(null);
+const [loadingPred,setLoadingPred] = useState(false);
+const [loadingPrice,setLoadingPrice] = useState(false);
+const [error,setError] = useState(null);
 
-const [portfolio, setPortfolio] = useState({
+const [portfolio,setPortfolio] = useState({
 cash:10000,
 btc:0,
 history:[]
@@ -61,6 +60,7 @@ return ()=>clearInterval(timer);
 
 },[]);
 
+
 /* ---------------- PRICE FETCH ---------------- */
 
 const getPrice = useCallback(async()=>{
@@ -72,10 +72,11 @@ setLoadingPrice(true);
 const pair = symbolMap[symbol] || "BTCUSDT";
 
 const res = await axios.get(
-`https://api.binance.com/api/v3/ticker/price?symbol=${pair}`
+"https://api.binance.com/api/v3/ticker/price",
+{params:{symbol:pair}}
 );
 
-setPrice(res.data.price);
+setPrice(parseFloat(res.data.price));
 setError(null);
 
 }catch(err){
@@ -107,17 +108,11 @@ return ()=>clearInterval(interval);
 
 useEffect(()=>{
 
-if(predictions.length>0 && price){
+if(!predictions.length || !price) return;
 
-const updatedPortfolio = executeTrade(
-predictions[0],
-price,
-portfolio
+setPortfolio(prev =>
+executeTrade(predictions[0],price,prev)
 );
-
-setPortfolio(updatedPortfolio);
-
-}
 
 },[predictions,price]);
 
@@ -128,18 +123,34 @@ const getPredictions = async()=>{
 try{
 
 setLoadingPred(true);
+setError(null);
 
-const response = await axios.post(`${API}/model/predict`,{
+const res = await axios.post(`${API}/model/predict`,{
 symbol,
 horizon:5
 });
 
-setPredictions(response?.data?.predictions || []);
+if(!res.data || !res.data.predictions){
+throw new Error("Invalid prediction response");
+}
+
+setPredictions(res.data.predictions);
 
 }catch(err){
 
 console.error(err);
-setError("Prediction API failed");
+
+if(err.response){
+setError(err.response.data?.detail || "Prediction API error");
+}
+else if(err.request){
+setError("Server not responding");
+}
+else{
+setError("Prediction request failed");
+}
+
+setPredictions([]);
 
 }finally{
 
@@ -149,6 +160,18 @@ setLoadingPred(false);
 
 };
 
+/* ---------------- AUTO PREDICTION LOOP ---------------- */
+
+useEffect(()=>{
+
+getPredictions();
+
+const interval = setInterval(getPredictions,30000);
+
+return ()=>clearInterval(interval);
+
+},[symbol]);
+
 /* ---------------- STYLES ---------------- */
 
 const styles={
@@ -157,7 +180,6 @@ container:{
 padding:20,
 display:"grid",
 gridTemplateColumns:"260px minmax(600px,1fr) 320px",
-alignItems:"start",
 gap:20,
 background:"#0a0a0a",
 minHeight:"100vh",
@@ -191,27 +213,23 @@ return(
 
 <div style={styles.container}>
 
-{/* LEFT SIDEBAR */}
+{/* LEFT PANEL */}
 
 <div>
 
 <h2>Vision-AI</h2>
 
 <p style={{color:"#aaa"}}>
-{time.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'})}
+{time.toLocaleTimeString()}
 </p>
-
-{/* SYMBOL SWITCH */}
 
 <div style={{marginBottom:15}}>
 
-<button style={styles.button} onClick={()=>setSymbol("BTC-USD")}>BTC</button>
-<button style={styles.button} onClick={()=>setSymbol("ETH-USD")}>ETH</button>
-<button style={styles.button} onClick={()=>setSymbol("SOL-USD")}>SOL</button>
+<button style={styles.button} onClick={()=>setSymbol("BTCUSDT")}>BTC</button>
+<button style={styles.button} onClick={()=>setSymbol("ETHUSDT")}>ETH</button>
+<button style={styles.button} onClick={()=>setSymbol("SOLUSDT")}>SOL</button>
 
 </div>
-
-{/* ACTION BUTTONS */}
 
 <div style={{marginBottom:15}}>
 
@@ -225,14 +243,12 @@ Refresh Price
 
 </div>
 
-{/* LIVE PRICE */}
-
 <div style={styles.card}>
 
 <h3>Live Price</h3>
 
 <p style={{fontSize:22}}>
-{loadingPrice ? "Loading..." : `$${price ? parseFloat(price).toFixed(2) : "--"}`}
+{loadingPrice ? "Loading..." : `$${price?.toFixed(2) || "--"}`}
 </p>
 
 </div>
@@ -250,7 +266,7 @@ Refresh Price
 
 <div style={styles.card}>
 
-<h2>{symbol.replace("-USD","")} AI Trading Chart</h2>
+<h2>{symbol.split("-")[0]} AI Trading Chart</h2>
 
 <Chart symbol={symbol} predictions={predictions}/>
 
@@ -272,7 +288,7 @@ fontWeight:"bold",
 marginLeft:6
 }}>
 
-{predictions[0].direction==="UP"?"BUY":"SELL"}
+{predictions[0].direction==="UP" ? "BUY":"SELL"}
 
 </span>
 
@@ -340,7 +356,7 @@ color:"#aaa",
 borderTop:"1px solid #222"
 }}>
 
-Vision-AI <br/>
+Vision-AI<br/>
 
 Built by <b>Abhinav Saha</b><br/>
 

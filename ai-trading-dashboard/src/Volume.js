@@ -1,5 +1,5 @@
-import React,{useEffect,useRef} from "react";
-import {createChart,HistogramSeries} from "lightweight-charts";
+import React, { useEffect, useRef } from "react";
+import { createChart } from "lightweight-charts";
 
 function Volume(){
 
@@ -7,31 +7,34 @@ const ref = useRef(null);
 
 useEffect(()=>{
 
+if(!ref.current) return;
+
 const chart = createChart(ref.current,{
 height:150,
 
 layout:{
 background:{color:"#0f0f0f"},
 textColor:"#DDD"
+},
+
+grid:{
+vertLines:{color:"#1a1a1a"},
+horzLines:{color:"#1a1a1a"}
 }
+
 });
 
-const volumeSeries = chart.addSeries(HistogramSeries,{
+const volumeSeries = chart.addHistogramSeries({
 color:"#26a69a"
 });
 
-volumeSeries.setData([
-{time:1700000000,value:100},
-{time:1700000600,value:200},
-{time:1700001200,value:150},
-{time:1700001800,value:300}
-]);
+volumeSeries.setData([]);
 
 return ()=>chart.remove();
 
 },[]);
 
-return <div ref={ref}></div>;
+return <div ref={ref} style={{width:"100%"}}></div>;
 
 }
 
