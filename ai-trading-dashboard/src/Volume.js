@@ -1,41 +1,31 @@
+// src/Volume.js
 import React, { useEffect, useRef } from "react";
 import { createChart } from "lightweight-charts";
 
-function Volume(){
+function Volume({ data = [] }) {
+  const ref = useRef();
 
-const ref = useRef(null);
+  useEffect(() => {
+    if (!ref.current) return;
 
-useEffect(()=>{
+    const chart = createChart(ref.current, {
+      height: 120,
+      layout: { backgroundColor: "#0b0b0b", textColor: "#DDE" }
+    });
 
-if(!ref.current) return;
+    const hist = chart.addHistogramSeries({
+      color: '#26a69a',
+      priceFormat: { type: 'volume' },
+      priceScaleId: '',
+      scaleMargins: { top: 0.8, bottom: 0 }
+    });
 
-const chart = createChart(ref.current,{
-height:150,
+    hist.setData(data);
 
-layout:{
-background:{color:"#0f0f0f"},
-textColor:"#DDD"
-},
+    return () => chart.remove();
+  }, [data]);
 
-grid:{
-vertLines:{color:"#1a1a1a"},
-horzLines:{color:"#1a1a1a"}
-}
-
-});
-
-const volumeSeries = chart.addHistogramSeries({
-color:"#26a69a"
-});
-
-volumeSeries.setData([]);
-
-return ()=>chart.remove();
-
-},[]);
-
-return <div ref={ref} style={{width:"100%"}}></div>;
-
+  return <div ref={ref} />;
 }
 
 export default Volume;

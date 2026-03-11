@@ -17,6 +17,13 @@ from src.backtesting.engine import BacktestEngine
 from src.prediction.predictor import Predictor
 from src.api.auth_routes import router as auth_router
 
+from src.quant.signal_engine import SignalEngine
+from src.quant.confidence_engine import ConfidenceEngine
+from src.Risk_manager.risk_score import RiskScore
+
+from src.regime.regime_detector import RegimeDetector
+from src.strategy.strategy_selector import StrategySelector
+
 
 # --------------------------------------------------
 # Logging
@@ -40,17 +47,19 @@ app = FastAPI(
     version="1.0.0",
 )
 
+
 # --------------------------------------------------
 # Middleware
 # --------------------------------------------------
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # change later for production frontend domain
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # --------------------------------------------------
 # Routers
@@ -60,14 +69,21 @@ app.include_router(auth_router, prefix="/auth")
 
 
 # --------------------------------------------------
-# Services (singletons)
+# Services (Singletons)
 # --------------------------------------------------
 
 fetcher = DataFetcher()
 engineer = FeatureEngineer()
 trainer = ModelTrainer()
 
-# Safe predictor initialization
+signal_engine = SignalEngine()
+confidence_engine = ConfidenceEngine()
+risk_engine = RiskScore()
+
+regime_detector = RegimeDetector()
+strategy_selector = StrategySelector()
+
+
 predictor = None
 
 try:
@@ -103,7 +119,7 @@ class BacktestRequest(BaseModel):
 
 
 # --------------------------------------------------
-# Health Endpoints
+# Health
 # --------------------------------------------------
 
 @app.get("/")
@@ -138,10 +154,7 @@ async def fetch_data(request: DataRequest):
         df = fetcher.fetch(symbol)
 
         if df is None or df.empty:
-            raise HTTPException(
-                status_code=404,
-                detail="No data found"
-            )
+            raise HTTPException(404, "No data found")
 
         return {
             "symbol": request.symbol,
@@ -153,10 +166,7 @@ async def fetch_data(request: DataRequest):
 
         logger.error(f"Data fetch error: {e}")
 
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
+        raise HTTPException(500, str(e))
 
 
 # --------------------------------------------------
@@ -184,10 +194,7 @@ async def generate_features(request: DataRequest):
 
         logger.error(f"Feature generation error: {e}")
 
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
+        raise HTTPException(500, str(e))
 
 
 # --------------------------------------------------
@@ -220,14 +227,11 @@ async def train_model(request: TrainRequest):
 
         logger.error(f"Model training error: {e}")
 
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
+        raise HTTPException(500, str(e))
 
 
 # --------------------------------------------------
-# Predict
+# Predict + Quant Intelligence
 # --------------------------------------------------
 
 @app.post("/model/predict")
@@ -244,14 +248,77 @@ async def predict(request: PredictRequest):
 
         symbol = request.symbol.replace("USDT", "/USDT")
 
+        # -----------------------
+        # ML Predictions
+        # -----------------------
+
         preds = predictor.predict_symbol(
             symbol=symbol,
             horizon=request.horizon
         )
 
+        probability = preds[0]["probability"]
+
+        # -----------------------
+        # Market Data
+        # -----------------------
+
+        df = fetcher.fetch(symbol)
+
+        df = engineer.add_all_indicators(df)
+
+        df = df.dropna()
+
+        # -----------------------
+        # Regime Detection
+        # -----------------------
+
+        regime = regime_detector.get_regime(df)
+
+        strategy = strategy_selector.select_strategy(regime["trend"])
+
+        # -----------------------
+        # Quant Signal
+        # -----------------------
+
+        signal_data = signal_engine.generate_signal(
+            df,
+            preds[0],
+            sentiment_score=0
+        )
+
+        # -----------------------
+        # Confidence + Risk
+        # -----------------------
+
+        confidence = confidence_engine.calculate_confidence(probability)
+
+        risk = risk_engine.calculate_risk(df)
+
+        # -----------------------
+        # Response
+        # -----------------------
+
         return {
+
             "symbol": request.symbol,
-            "predictions": preds
+
+            "predictions": preds,
+
+            "signal": signal_data["direction"],
+
+            "signal_score": signal_data["score"],
+
+            "components": signal_data["signals"],
+
+            "confidence": confidence,
+
+            "risk": risk,
+
+            "regime": regime,
+
+            "strategy": strategy
+
         }
 
     except Exception as e:
@@ -304,5 +371,11 @@ async def run_backtest(request: BacktestRequest):
 # --------------------------------------------------
 
 if __name__ == "__main__":
+
     import uvicorn
-    uvicorn.run("src.api.main:app", host="0.0.0.0", port=10000)    
+
+    uvicorn.run(
+        "src.api.main:app",
+        host="0.0.0.0",
+        port=10000
+    )

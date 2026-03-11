@@ -1,5 +1,4 @@
 import React from "react";
-import EquityCurve from "./EquityCurve";
 
 function Performance() {
 

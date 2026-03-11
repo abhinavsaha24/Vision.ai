@@ -3,6 +3,16 @@ import numpy as np
 
 class QuantSignalEngine:
 
+    """
+    Combines multiple signals into a final trading decision.
+
+    Signals used:
+    - AI prediction
+    - Momentum
+    - Mean Reversion (RSI)
+    - Sentiment
+    """
+
     def __init__(self):
 
         self.weights = {
@@ -12,18 +22,30 @@ class QuantSignalEngine:
             "sentiment": 0.2
         }
 
+    # -----------------------------
+    # AI Signal
+    # -----------------------------
+
     def ai_signal(self, prediction):
 
-        if prediction["probability"] > 0.6:
+        prob = prediction["probability"]
+
+        if prob > 0.6:
             return 1
 
-        if prediction["probability"] < 0.4:
+        if prob < 0.4:
             return -1
 
         return 0
 
+    # -----------------------------
+    # Momentum Signal
+    # -----------------------------
 
     def momentum_signal(self, df):
+
+        if len(df) < 10:
+            return 0
 
         close = df["close"]
 
@@ -37,8 +59,14 @@ class QuantSignalEngine:
 
         return 0
 
+    # -----------------------------
+    # Mean Reversion (RSI)
+    # -----------------------------
 
     def mean_reversion_signal(self, df):
+
+        if "RSI" not in df.columns:
+            return 0
 
         rsi = df["RSI"].iloc[-1]
 
@@ -50,6 +78,9 @@ class QuantSignalEngine:
 
         return 0
 
+    # -----------------------------
+    # Sentiment Signal
+    # -----------------------------
 
     def sentiment_signal(self, sentiment_score):
 
@@ -61,8 +92,11 @@ class QuantSignalEngine:
 
         return 0
 
+    # -----------------------------
+    # Final Signal Aggregation
+    # -----------------------------
 
-    def generate_signal(self, df, prediction, sentiment_score):
+    def generate_signal(self, df, prediction, sentiment_score=0):
 
         signals = {}
 
@@ -74,16 +108,30 @@ class QuantSignalEngine:
 
         signals["sentiment"] = self.sentiment_signal(sentiment_score)
 
+        # weighted score
         final_score = 0
 
         for name, signal in signals.items():
 
-            final_score += signal * self.weights[name]
+            weight = self.weights.get(name, 0)
 
-        if final_score > 0:
-            return 1
+            final_score += signal * weight
 
-        if final_score < 0:
-            return -1
+        # normalize score
+        final_score = round(final_score, 3)
 
-        return 0
+        # determine direction
+        if final_score > 0.1:
+            direction = "BUY"
+
+        elif final_score < -0.1:
+            direction = "SELL"
+
+        else:
+            direction = "HOLD"
+
+        return {
+            "direction": direction,
+            "score": final_score,
+            "signals": signals
+        }

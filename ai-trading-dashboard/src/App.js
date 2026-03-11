@@ -21,7 +21,7 @@ import PnLDashboard from "./PnLDashboard";
 
 function App() {
 
-const API = process.env.REACT_APP_API || "https://vision-ai-omega-umber.vercel.app";
+const API = process.env.REACT_APP_API || "https://vision-ai-5qm1.onrender.com";
 
 /* ---------------- STATES ---------------- */
 
@@ -32,7 +32,16 @@ const [time,setTime] = useState(new Date());
 
 const [loadingPred,setLoadingPred] = useState(false);
 const [loadingPrice,setLoadingPrice] = useState(false);
-const [error,setError] = useState(null);
+const [setError] = useState(null);
+
+const [signal,setSignal] = useState(null);
+const [confidence,setConfidence] = useState(null);
+const [risk,setRisk] = useState(null);
+const [score,setScore] = useState(null);
+const [components,setComponents] = useState({});
+
+const [regime,setRegime] = useState({});
+const [strategy,setStrategy] = useState(null);
 
 const [portfolio,setPortfolio] = useState({
 cash:10000,
@@ -40,71 +49,63 @@ btc:0,
 history:[]
 });
 
-/* ---------------- SYMBOL MAP ---------------- */
 
-const symbolMap = {
-"BTC-USD":"BTCUSDT",
-"ETH-USD":"ETHUSDT",
-"SOL-USD":"SOLUSDT"
-};
-
-/* ---------------- LIVE CLOCK ---------------- */
+/* ---------------- CLOCK ---------------- */
 
 useEffect(()=>{
 
-const timer = setInterval(()=>{
+const timer=setInterval(()=>{
 setTime(new Date());
 },1000);
 
-return ()=>clearInterval(timer);
+return()=>clearInterval(timer);
 
 },[]);
 
 
 /* ---------------- PRICE FETCH ---------------- */
 
-const getPrice = useCallback(async()=>{
+const getPrice = useCallback(async () => {
 
-try{
+  try {
 
-setLoadingPrice(true);
+    setLoadingPrice(true);
 
-const pair = symbolMap[symbol] || "BTCUSDT";
+    const res = await axios.get(
+      "https://api.binance.com/api/v3/ticker/price",
+      { params: { symbol } }
+    );
 
-const res = await axios.get(
-"https://api.binance.com/api/v3/ticker/price",
-{params:{symbol:pair}}
-);
+    setPrice(parseFloat(res.data.price));
+    setError(null);
 
-setPrice(parseFloat(res.data.price));
-setError(null);
+  } catch (err) {
 
-}catch(err){
+    console.error(err);
+    setError("Price API error");
 
-console.error(err);
-setError("Price API error");
+  } finally {
 
-}finally{
+    setLoadingPrice(false);
 
-setLoadingPrice(false);
+  }
 
-}
+}, [symbol, setError]);
 
-},[symbol]);
-
-/* ---------------- AUTO REFRESH PRICE ---------------- */
+/* ---------------- PRICE LOOP ---------------- */
 
 useEffect(()=>{
 
 getPrice();
 
-const interval = setInterval(getPrice,30000);
+const interval=setInterval(getPrice,30000);
 
-return ()=>clearInterval(interval);
+return()=>clearInterval(interval);
 
 },[getPrice]);
 
-/* ---------------- AUTO AI TRADE ---------------- */
+
+/* ---------------- AUTO TRADE SIMULATION ---------------- */
 
 useEffect(()=>{
 
@@ -116,49 +117,64 @@ executeTrade(predictions[0],price,prev)
 
 },[predictions,price]);
 
-/* ---------------- AI PREDICTION ---------------- */
 
-const getPredictions = async()=>{
+/* ---------------- AI PREDICTIONS ---------------- */
 
-try{
+const getPredictions = useCallback(async () => {
 
-setLoadingPred(true);
-setError(null);
+  try {
 
-const res = await axios.post(`${API}/model/predict`,{
-symbol,
-horizon:5
-});
+    setLoadingPred(true);
+    setError(null);
 
-if(!res.data || !res.data.predictions){
-throw new Error("Invalid prediction response");
-}
+    const res = await axios.post(
+      `${API}/model/predict`,
+      {
+        symbol,
+        horizon:5
+      },
+      {timeout:15000}
+    );
 
-setPredictions(res.data.predictions);
+    const data=res.data;
 
-}catch(err){
+    if(!data || !data.predictions){
+      throw new Error("Invalid prediction response");
+    }
 
-console.error(err);
+    setPredictions(data.predictions);
 
-if(err.response){
-setError(err.response.data?.detail || "Prediction API error");
-}
-else if(err.request){
-setError("Server not responding");
-}
-else{
-setError("Prediction request failed");
-}
+    setSignal(data.signal);
+    setConfidence(data.confidence);
+    setRisk(data.risk);
+    setScore(data.signal_score);
+    setComponents(data.components || {});
+    setRegime(data.regime || {});
+    setStrategy(data.strategy || null);
 
-setPredictions([]);
+  } catch(err){
 
-}finally{
+    console.error(err);
 
-setLoadingPred(false);
+    if(err.response){
+      setError(err.response.data.detail);
+    }
+    else if(err.request){
+      setError("Backend sleeping (Render cold start)");
+    }
+    else{
+      setError("Prediction request failed");
+    }
 
-}
+    setPredictions([]);
 
-};
+  } finally {
+
+    setLoadingPred(false);
+
+  }
+
+}, [API, symbol,setError]);
 
 /* ---------------- AUTO PREDICTION LOOP ---------------- */
 
@@ -166,11 +182,25 @@ useEffect(()=>{
 
 getPredictions();
 
-const interval = setInterval(getPredictions,30000);
+const interval=setInterval(()=>{
+getPredictions();
+},10000);
 
-return ()=>clearInterval(interval);
+return()=>clearInterval(interval);
 
-},[symbol]);
+},[symbol, getPredictions]);
+
+/* ---------------- SIGNAL TEXT ---------------- */
+
+const signalText = (val)=>{
+
+if(val===1) return "Bullish";
+if(val===-1) return "Bearish";
+
+return "Neutral";
+
+};
+
 
 /* ---------------- STYLES ---------------- */
 
@@ -206,6 +236,7 @@ marginRight:6
 }
 
 };
+
 
 return(
 
@@ -260,49 +291,84 @@ Refresh Price
 
 </div>
 
+
 {/* CENTER PANEL */}
 
 <div>
 
 <div style={styles.card}>
 
-<h2>{symbol.split("-")[0]} AI Trading Chart</h2>
+<h2>{symbol.replace("USDT","")} AI Trading Chart</h2>
 
 <Chart symbol={symbol} predictions={predictions}/>
 
 </div>
 
-{predictions.length>0 &&(
+
+{/* AI SIGNAL */}
 
 <div style={styles.card}>
 
-<h3>AI Signal</h3>
+<h3>AI Trading Intelligence</h3>
 
 <p>
 
 <b>Signal:</b>
 
 <span style={{
-color: predictions[0].direction==="UP" ? "#00ff9c":"#ff4d4d",
+color:
+signal==="BUY"
+? "#00ff9c"
+: signal==="SELL"
+? "#ff4d4d"
+: "#aaa",
 fontWeight:"bold",
 marginLeft:6
 }}>
 
-{predictions[0].direction==="UP" ? "BUY":"SELL"}
+{signal || "--"}
 
 </span>
 
 </p>
 
-<p>
-
-Confidence {(predictions[0].probability*100).toFixed(2)}%
-
-</p>
+<p>Confidence: {confidence || "--"}</p>
+<p>Risk Level: {risk || "--"}</p>
+<p>Signal Score: {score || "--"}</p>
 
 </div>
 
-)}
+
+{/* MARKET REGIME */}
+
+<div style={styles.card}>
+
+<h3>Market Regime</h3>
+
+<p>Trend: {regime?.trend || "--"}</p>
+
+<p>Volatility: {regime?.volatility || "--"}</p>
+
+<p>Momentum: {regime?.momentum || "--"}</p>
+
+<p>Active Strategy: {strategy || "--"}</p>
+
+</div>
+
+
+{/* SIGNAL BREAKDOWN */}
+
+<div style={styles.card}>
+
+<h3>Signal Breakdown</h3>
+
+<p>AI Model: {signalText(components.ai)}</p>
+<p>Momentum: {signalText(components.momentum)}</p>
+<p>Mean Reversion: {signalText(components.mean_reversion)}</p>
+<p>Sentiment: {signalText(components.sentiment)}</p>
+
+</div>
+
 
 <div style={styles.card}><Volume/></div>
 <div style={styles.card}><RSI/></div>
@@ -317,6 +383,7 @@ Confidence {(predictions[0].probability*100).toFixed(2)}%
 </div>
 
 </div>
+
 
 {/* RIGHT PANEL */}
 
@@ -345,6 +412,7 @@ Confidence {(predictions[0].probability*100).toFixed(2)}%
 </div>
 
 </div>
+
 
 {/* FOOTER */}
 

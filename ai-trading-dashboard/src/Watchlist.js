@@ -1,70 +1,79 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect,useCallback,useMemo } from "react";
 import axios from "axios";
 
 function Watchlist() {
 
-  const assets = ["BTCUSDT", "ETHUSDT", "SOLUSDT"];
+  const assets = useMemo(() => [
+  "BTCUSDT",
+  "ETHUSDT",
+  "SOLUSDT"
+], []);
   const [prices, setPrices] = useState({});
 
-  const loadPrices = async () => {
+ const loadPrices = useCallback(async () => {
 
   try {
 
-    const requests = assets.map(asset =>
-      axios.get(`https://api.binance.com/api/v3/ticker/price?symbol=${asset}`)
+    const res = await axios.get(
+      "https://api.binance.com/api/v3/ticker/price"
     );
 
-    const responses = await Promise.all(requests);
+    const data = res.data;
 
-    const updated = {};
+    const newPrices = {};
 
-    responses.forEach((r, i) => {
-      updated[assets[i]] = r.data.price;
+    assets.forEach(a => {
+
+      const match = data.find(d => d.symbol === a);
+
+      if(match){
+        newPrices[a] = match.price;
+      }
+
     });
 
-    setPrices(updated);
+    setPrices(newPrices);
 
-  } catch(err) {
-
+  } catch(err){
     console.error(err);
-
   }
 
-};
+}, [assets]);
 
-  useEffect(() => {
+ useEffect(() => {
 
-    loadPrices();
+  loadPrices();
 
-    const interval = setInterval(loadPrices, 30000);
+  const interval = setInterval(loadPrices, 30000);
 
-    return () => clearInterval(interval);
+  return () => clearInterval(interval);
 
-  }, []);
+}, [loadPrices]);
 
-  return (
 
-    <div style={{marginBottom:20}}>
+return (
 
-      <h3>Watchlist</h3>
+  <div style={{ marginBottom:20 }}>
 
-      {assets.map(a => (
+    <h3>Watchlist</h3>
 
-        <div key={a} style={{marginBottom:6}}>
+    {assets.map(a => (
 
-          <b>{a.replace("USDT","")}</b>
+      <div key={a} style={{ marginBottom:6 }}>
 
-          {"  "}  
+        <b>{a.replace("USDT","")}</b>
 
-          ${prices[a] ? parseFloat(prices[a]).toFixed(2) : "--"}
+        {"  "}
 
-        </div>
+        ${prices[a] ? parseFloat(prices[a]).toFixed(2) : "--"}
 
-      ))}
+      </div>
 
-    </div>
+    ))}
 
-  );
+  </div>
+
+);
 
 }
 
