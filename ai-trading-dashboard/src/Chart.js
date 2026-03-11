@@ -8,11 +8,14 @@ function Chart({ symbol = "BTCUSDT", predictions = [] }) {
   const seriesRef = useRef(null);
   const wsRef = useRef(null);
 
+  // ---------------------------
+  // Create chart once
+  // ---------------------------
+
   useEffect(() => {
 
     if (!containerRef.current) return;
 
-    // Create chart
     const chart = createChart(containerRef.current, {
       width: containerRef.current.clientWidth,
       height: 420,
@@ -24,15 +27,9 @@ function Chart({ symbol = "BTCUSDT", predictions = [] }) {
         vertLines: { color: "#18202A" },
         horzLines: { color: "#18202A" }
       },
-      crosshair: {
-        mode: 1
-      },
-      rightPriceScale: {
-        borderColor: "#333"
-      },
-      timeScale: {
-        borderColor: "#333"
-      }
+      crosshair: { mode: 1 },
+      rightPriceScale: { borderColor: "#333" },
+      timeScale: { borderColor: "#333" }
     });
 
     const candleSeries = chart.addCandlestickSeries({
@@ -46,9 +43,30 @@ function Chart({ symbol = "BTCUSDT", predictions = [] }) {
     chartRef.current = chart;
     seriesRef.current = candleSeries;
 
-    // ------------------------------
-    // Load historical candles first
-    // ------------------------------
+    const resize = () => {
+      if (!containerRef.current || !chartRef.current) return;
+
+      chartRef.current.applyOptions({
+        width: containerRef.current.clientWidth
+      });
+    };
+
+    window.addEventListener("resize", resize);
+
+    return () => {
+      window.removeEventListener("resize", resize);
+      chart.remove();
+    };
+
+  }, []);
+
+  // ---------------------------
+  // Load historical candles
+  // ---------------------------
+
+  useEffect(() => {
+
+    if (!seriesRef.current) return;
 
     const loadHistory = async () => {
 
@@ -68,18 +86,27 @@ function Chart({ symbol = "BTCUSDT", predictions = [] }) {
           close: parseFloat(c[4])
         }));
 
-        candleSeries.setData(candles);
+        seriesRef.current.setData(candles);
 
       } catch (err) {
         console.error("Failed to load history", err);
       }
+
     };
 
     loadHistory();
 
-    // ------------------------------
-    // WebSocket connection
-    // ------------------------------
+  }, [symbol]);
+
+  // ---------------------------
+  // WebSocket live updates
+  // ---------------------------
+
+  useEffect(() => {
+
+    if (!seriesRef.current) return;
+
+    let reconnectTimeout;
 
     const connectWS = () => {
 
@@ -106,88 +133,60 @@ function Chart({ symbol = "BTCUSDT", predictions = [] }) {
             close: parseFloat(k.c)
           };
 
-          candleSeries.update(candle);
+          seriesRef.current.update(candle);
 
         } catch (err) {
           console.error("WebSocket parse error", err);
         }
+
       };
 
       ws.onerror = (err) => {
-        console.warn("Chart websocket error", err);
+        console.warn("WebSocket error", err);
       };
 
       ws.onclose = () => {
 
-        console.warn("Chart websocket closed. Reconnecting...");
+        console.warn("WebSocket closed — reconnecting...");
 
-        setTimeout(connectWS, 3000);
+        reconnectTimeout = setTimeout(connectWS, 3000);
+
       };
+
     };
 
     connectWS();
 
-    // ------------------------------
-    // Prediction markers
-    // ------------------------------
-
-    if (predictions && predictions.length > 0) {
-
-      const markers = predictions.map((p, i) => ({
-
-        time: Math.floor(Date.now() / 1000) - i * 60,
-
-        position: p.direction === "UP"
-          ? "belowBar"
-          : "aboveBar",
-
-        color: p.direction === "UP"
-          ? "#00ff9c"
-          : "#ff4d4d",
-
-        shape: p.direction === "UP"
-          ? "arrowUp"
-          : "arrowDown",
-
-        text: `${Math.round(p.probability * 100)}%`
-
-      }));
-
-      candleSeries.setMarkers(markers);
-    }
-
-    // ------------------------------
-    // Responsive resize
-    // ------------------------------
-
-    const handleResize = () => {
-
-      if (containerRef.current && chartRef.current) {
-
-        chartRef.current.applyOptions({
-          width: containerRef.current.clientWidth
-        });
-
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-
-    // ------------------------------
-    // Cleanup
-    // ------------------------------
-
     return () => {
 
       if (wsRef.current) wsRef.current.close();
-
-      window.removeEventListener("resize", handleResize);
-
-      chart.remove();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
 
     };
 
-  }, [symbol, predictions]);
+  }, [symbol]);
+
+  // ---------------------------
+  // Prediction markers
+  // ---------------------------
+
+  useEffect(() => {
+
+    if (!seriesRef.current) return;
+
+    if (!predictions || predictions.length === 0) return;
+
+    const markers = predictions.map((p, i) => ({
+      time: Math.floor(Date.now() / 1000) - i * 60,
+      position: p.direction === "UP" ? "belowBar" : "aboveBar",
+      color: p.direction === "UP" ? "#00ff9c" : "#ff4d4d",
+      shape: p.direction === "UP" ? "arrowUp" : "arrowDown",
+      text: `${Math.round(p.probability * 100)}%`
+    }));
+
+    seriesRef.current.setMarkers(markers);
+
+  }, [predictions]);
 
   return (
     <div
@@ -198,6 +197,7 @@ function Chart({ symbol = "BTCUSDT", predictions = [] }) {
       }}
     />
   );
+
 }
 
 export default Chart;

@@ -124,12 +124,12 @@ class BacktestRequest(BaseModel):
 
 @app.get("/")
 async def root():
-
     return {
         "status": "ok",
-        "service": "Vision-AI Trading API"
+        "service": "Vision-AI Trading API",
+        "version": "1.1",
+        "deployed": "March 11 2026"
     }
-
 
 @app.get("/health")
 async def health():
