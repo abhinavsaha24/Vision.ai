@@ -136,7 +136,7 @@ const getPredictions = useCallback(async () => {
       {timeout:15000}
     );
 
-    const data=res.data;
+    const data = res.data;
 
     if(!data || !data.predictions){
       throw new Error("Invalid prediction response");
@@ -180,15 +180,13 @@ const getPredictions = useCallback(async () => {
 
 useEffect(()=>{
 
-getPredictions();
+  getPredictions();
 
-const interval=setInterval(()=>{
-getPredictions();
-},10000);
+  const interval = setInterval(getPredictions, 10000);
 
-return()=>clearInterval(interval);
+  return () => clearInterval(interval);
 
-},[symbol, getPredictions]);
+}, [getPredictions]);
 
 /* ---------------- SIGNAL TEXT ---------------- */
 
