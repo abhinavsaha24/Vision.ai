@@ -149,7 +149,11 @@ function Chart({ symbol = "BTCUSDT", predictions = [] }) {
 
         console.warn("WebSocket closed — reconnecting...");
 
-        reconnectTimeout = setTimeout(connectWS, 3000);
+        reconnectTimeout = setTimeout(() => {
+  if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
+    connectWS();
+  }
+}, 3000);
 
       };
 

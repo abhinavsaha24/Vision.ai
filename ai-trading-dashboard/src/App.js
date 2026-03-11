@@ -18,6 +18,7 @@ import NewsFeed from "./NewsFeed";
 import RiskDashboard from "./RiskDashboard";
 import { executeTrade } from "./TradeEngine";
 import PnLDashboard from "./PnLDashboard";
+import { fetchNews } from "./news";
 
 function App() {
 
@@ -26,6 +27,7 @@ const API = process.env.REACT_APP_API || "https://vision-ai-5qm1.onrender.com";
 /* ---------------- STATES ---------------- */
 
 const [symbol,setSymbol] = useState("BTCUSDT");
+const [news,setNews] = useState([]);
 const [predictions,setPredictions] = useState([]);
 const [price,setPrice] = useState(null);
 const [time,setTime] = useState(new Date());
@@ -42,8 +44,8 @@ const [components,setComponents] = useState({});
 
 const [regime,setRegime] = useState({});
 const [strategy,setStrategy] = useState(null);
-
 const [portfolio,setPortfolio] = useState({
+
 cash:10000,
 btc:0,
 history:[]
@@ -107,15 +109,17 @@ return()=>clearInterval(interval);
 
 /* ---------------- AUTO TRADE SIMULATION ---------------- */
 
-useEffect(()=>{
+useEffect(() => {
 
-if(!predictions.length || !price) return;
+  if (!predictions.length || !price) return;
 
-setPortfolio(prev =>
-executeTrade(predictions[0],price,prev)
-);
+  if (typeof executeTrade !== "function") return;
 
-},[predictions,price]);
+  setPortfolio(prev =>
+    executeTrade(predictions[0], price, prev)
+  );
+
+}, [predictions, price]);
 
 
 /* ---------------- AI PREDICTIONS ---------------- */
@@ -125,46 +129,34 @@ const getPredictions = useCallback(async () => {
   try {
 
     setLoadingPred(true);
-    setError(null);
 
     const res = await axios.post(
       `${API}/model/predict`,
       {
         symbol,
-        horizon:5
+        horizon: 5
       },
-      {timeout:15000}
+      { timeout: 15000 }
     );
 
     const data = res.data;
 
-    if(!data || !data.predictions){
+    if (!data || !data.predictions) {
       throw new Error("Invalid prediction response");
     }
 
     setPredictions(data.predictions);
-
-    setSignal(data.signal);
-    setConfidence(data.confidence);
-    setRisk(data.risk);
-    setScore(data.signal_score);
+    setSignal(data.signal || null);
+    setConfidence(data.confidence || null);
+    setRisk(data.risk || null);
+    setScore(data.signal_score || null);
     setComponents(data.components || {});
     setRegime(data.regime || {});
     setStrategy(data.strategy || null);
 
-  } catch(err){
+  } catch (err) {
 
-    console.error(err);
-
-    if(err.response){
-      setError(err.response.data.detail);
-    }
-    else if(err.request){
-      setError("Backend sleeping (Render cold start)");
-    }
-    else{
-      setError("Prediction request failed");
-    }
+    console.error("Prediction error:", err);
 
     setPredictions([]);
 
@@ -174,15 +166,17 @@ const getPredictions = useCallback(async () => {
 
   }
 
-}, [API, symbol,setError]);
+}, [API, symbol]);
 
 /* ---------------- AUTO PREDICTION LOOP ---------------- */
 
-useEffect(()=>{
+useEffect(() => {
 
   getPredictions();
 
-  const interval = setInterval(getPredictions, 10000);
+  const interval = setInterval(() => {
+    getPredictions();
+  }, 10000);
 
   return () => clearInterval(interval);
 
@@ -235,6 +229,22 @@ marginRight:6
 
 };
 
+/* ---------------- NEWS LOAD ---------------- */
+
+useEffect(() => {
+
+  const loadNews = async () => {
+    const items = await fetchNews();
+    setNews(items);
+  };
+
+  loadNews();
+
+  const interval = setInterval(loadNews, 60000);
+
+  return () => clearInterval(interval);
+
+}, []);
 
 return(
 
@@ -396,7 +406,7 @@ marginLeft:6
 </div>
 
 <div style={styles.card}>
-<NewsFeed/>
+<NewsFeed items={news}/>
 </div>
 
 <div style={styles.card}>

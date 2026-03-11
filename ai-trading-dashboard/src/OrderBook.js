@@ -1,87 +1,106 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 
 function OrderBook({ symbol }) {
 
-const [bids,setBids] = useState([]);
-const [asks,setAsks] = useState([]);
+  const [bids, setBids] = useState([]);
+  const [asks, setAsks] = useState([]);
 
-useEffect(()=>{
+  const wsRef = useRef(null);
 
-let ws;
+  useEffect(() => {
 
-const connect = () => {
+    const connect = () => {
 
-ws = new WebSocket(
-`wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@depth20@100ms`
-);
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
 
-ws.onmessage = (event)=>{
+      const ws = new WebSocket(
+        `wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@depth20@100ms`
+      );
 
-const data = JSON.parse(event.data);
+      wsRef.current = ws;
 
-setBids(data.bids.slice(0,10));
-setAsks(data.asks.slice(0,10));
+      ws.onmessage = (event) => {
 
-};
+        try {
 
-ws.onerror = (err)=>{
-console.log("OrderBook websocket error:",err);
-};
+          const data = JSON.parse(event.data);
 
-ws.onclose = ()=>{
-console.log("OrderBook websocket closed — reconnecting...");
-setTimeout(connect,2000);
-};
+          setBids(data.bids.slice(0, 10));
+          setAsks(data.asks.slice(0, 10));
 
-};
+        } catch (err) {
+          console.warn("OrderBook parse error", err);
+        }
 
-connect();
+      };
 
-return ()=>{
-if(ws){
-ws.onclose = null;
-ws.close();
-}
-};
+      ws.onerror = (err) => {
+        console.warn("OrderBook websocket error:", err);
+      };
 
-},[symbol]);
-return(
+      ws.onclose = () => {
 
-<div>
+        console.log("OrderBook websocket closed — reconnecting...");
 
-<h3>Order Book</h3>
+        setTimeout(() => {
+          connect();
+        }, 3000);
 
-<div style={{display:"flex",gap:20}}>
+      };
 
-<div>
+    };
 
-<h4>Bids</h4>
+    connect();
 
-{bids.map((b,i)=>(
-<p key={i} style={{color:"#00ff9c"}}>
-{parseFloat(b[0]).toFixed(2)} ({parseFloat(b[1]).toFixed(4)})
-</p>
-))}
+    return () => {
 
-</div>
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
 
-<div>
+    };
 
-<h4>Asks</h4>
+  }, [symbol]);
 
-{asks.map((a,i)=>(
-<p key={i} style={{color:"#ff4d4d"}}>
-{parseFloat(a[0]).toFixed(2)} ({parseFloat(a[1]).toFixed(4)})
-</p>
-))}
+  return (
 
-</div>
+    <div>
 
-</div>
+      <h3>Order Book</h3>
 
-</div>
+      <div style={{ display: "flex", gap: 20 }}>
 
-);
+        <div>
+
+          <h4>Bids</h4>
+
+          {bids.map((b, i) => (
+            <p key={i} style={{ color: "#00ff9c" }}>
+              {parseFloat(b[0]).toFixed(2)} ({parseFloat(b[1]).toFixed(4)})
+            </p>
+          ))}
+
+        </div>
+
+        <div>
+
+          <h4>Asks</h4>
+
+          {asks.map((a, i) => (
+            <p key={i} style={{ color: "#ff4d4d" }}>
+              {parseFloat(a[0]).toFixed(2)} ({parseFloat(a[1]).toFixed(4)})
+            </p>
+          ))}
+
+        </div>
+
+      </div>
+
+    </div>
+
+  );
 
 }
 
