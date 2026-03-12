@@ -5,6 +5,7 @@ Production-ready API for AI Quant Trading Platform.
 
 from datetime import datetime
 import logging
+import time
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -82,6 +83,38 @@ risk_engine = RiskScore()
 regime_detector = MarketRegimeDetector()
 strategy_selector = StrategySelector()
 
+# -----------------------------
+# Market Data Cache
+# -----------------------------
+
+# --------------------------------------------------
+# Market Data Cache Function
+# --------------------------------------------------
+
+import time
+
+def get_market_data(symbol):
+
+    global cached_df, last_update
+
+    # refresh every 30 seconds
+    if cached_df is not None and time.time() - last_update < 30:
+        return cached_df
+
+    df = fetcher.fetch(symbol)
+
+    df = engineer.add_all_indicators(df)
+
+    df = df.dropna()
+
+    cached_df = df
+    last_update = time.time()
+
+    return df
+
+# -----------------------------
+# Predictor
+# -----------------------------
 
 predictor = None
 
@@ -91,7 +124,6 @@ try:
 
 except Exception as e:
     logger.error(f"Predictor failed to load: {e}")
-
 
 # --------------------------------------------------
 # Request Models
@@ -262,11 +294,7 @@ async def predict(request: PredictRequest):
         # Market Data
         # -----------------------
 
-        df = fetcher.fetch(symbol)
-
-        df = engineer.add_all_indicators(df)
-
-        df = df.dropna()
+        df = get_market_data(symbol)
 
         # -----------------------
         # Regime Detection

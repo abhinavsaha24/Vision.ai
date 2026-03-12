@@ -176,7 +176,7 @@ useEffect(() => {
 
   const interval = setInterval(() => {
     getPredictions();
-  }, 10000);
+  }, 30000);
 
   return () => clearInterval(interval);
 
