@@ -269,7 +269,6 @@ async def train_model(request: TrainRequest):
 async def predict(request: PredictRequest):
 
     if predictor is None:
-
         raise HTTPException(
             status_code=500,
             detail="Predictor not initialized"
@@ -301,7 +300,6 @@ async def predict(request: PredictRequest):
         # -----------------------
 
         regime = regime_detector.get_regime(df)
-
         strategy = strategy_selector.select_strategy(regime)
 
         # -----------------------
@@ -319,7 +317,6 @@ async def predict(request: PredictRequest):
         # -----------------------
 
         confidence = confidence_engine.calculate_confidence(probability)
-
         risk = risk_engine.calculate_risk(df)
 
         # -----------------------------
@@ -327,12 +324,11 @@ async def predict(request: PredictRequest):
         # -----------------------------
 
         base_position = 0.1  # 10% capital baseline
-
         position_size = base_position * confidence
 
         # reduce size if risk is high
         if isinstance(risk, dict) and risk.get("risk_level") == "high":
-        position_size *= 0.5
+            position_size *= 0.5
 
         position_size = round(position_size, 3)
 
@@ -340,30 +336,19 @@ async def predict(request: PredictRequest):
         # Response
         # -----------------------
 
-return {
+        return {
+            "symbol": request.symbol,
+            "predictions": preds,
+            "signal": signal_data["direction"],
+            "signal_score": signal_data["score"],
+            "components": signal_data["signals"],
+            "confidence": confidence,
+            "risk": risk,
+            "position_size": position_size,
+            "regime": regime,
+            "strategy": strategy
+        }
 
-    "symbol": request.symbol,
-
-    "predictions": preds,
-
-    "signal": signal_data["direction"],
-
-    "signal_score": signal_data["score"],
-
-    "components": signal_data["signals"],
-
-    "confidence": confidence,
-
-    "risk": risk,
-
-    "position_size": position_size,
-
-    "regime": regime_detector.detect_regime(df),
-
-    "strategy": strategy_selector.select_strategy(
-        regime_detector.detect_regime(df)
-    )
-}
     except Exception as e:
 
         logger.error(f"Prediction error: {e}")
@@ -372,7 +357,6 @@ return {
             status_code=500,
             detail=str(e)
         )
-
 
 # --------------------------------------------------
 # Backtest
