@@ -17,11 +17,11 @@ from src.backtesting.engine import BacktestEngine
 from src.prediction.predictor import Predictor
 from src.api.auth_routes import router as auth_router
 
-from src.quant.signal_engine import SignalEngine
+from src.quant.signal_engine import QuantSignalEngine
 from src.quant.confidence_engine import ConfidenceEngine
 from src.Risk_manager.risk_score import RiskScore
 
-from src.regime.regime_detector import RegimeDetector
+from src.regime.regime_detector import MarketRegimeDetector
 from src.strategy.strategy_selector import StrategySelector
 
 
@@ -67,7 +67,6 @@ app.add_middleware(
 
 app.include_router(auth_router, prefix="/auth")
 
-
 # --------------------------------------------------
 # Services (Singletons)
 # --------------------------------------------------
@@ -76,11 +75,11 @@ fetcher = DataFetcher()
 engineer = FeatureEngineer()
 trainer = ModelTrainer()
 
-signal_engine = SignalEngine()
+signal_engine = QuantSignalEngine()
 confidence_engine = ConfidenceEngine()
 risk_engine = RiskScore()
 
-regime_detector = RegimeDetector()
+regime_detector = MarketRegimeDetector()
 strategy_selector = StrategySelector()
 
 
@@ -275,7 +274,7 @@ async def predict(request: PredictRequest):
 
         regime = regime_detector.get_regime(df)
 
-        strategy = strategy_selector.select_strategy(regime["trend"])
+        strategy = strategy_selector.select_strategy(regime)
 
         # -----------------------
         # Quant Signal

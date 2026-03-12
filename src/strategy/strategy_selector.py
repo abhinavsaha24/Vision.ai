@@ -2,10 +2,16 @@ class StrategySelector:
 
     def select_strategy(self, regime):
 
-        if regime == "BULL":
+        trend = regime["trend"]
+        volatility = regime["volatility"]
+
+        if volatility == "high_volatility":
+            return "ai_strategy"
+
+        if trend == "uptrend":
             return "momentum"
 
-        if regime == "BEAR":
+        if trend == "downtrend":
             return "mean_reversion"
 
-        return "range_trading"
+        return "mean_reversion"
