@@ -48,19 +48,23 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# --------------------------------------------------
+# CORS Configuration
+# --------------------------------------------------
 
-# --------------------------------------------------
-# Middleware
-# --------------------------------------------------
+origins = [
+    "http://localhost:3000",
+    "https://vision-ldr1zh5bf-abhinavsaha24s-projects.vercel.app",
+    "*"
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 # --------------------------------------------------
 # Routers
