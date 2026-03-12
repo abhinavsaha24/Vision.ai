@@ -42,14 +42,18 @@ class QuantSignalEngine:
     # Momentum Signal
     # -----------------------------
 
-    def momentum_signal(self, df):
+def momentum_signal(self, df):
 
-        if len(df) < 10:
-            return 0
+    # Safety check
+    if "close" not in df.columns:
+        return 0
 
-        close = df["close"]
+    if len(df) < 10:
+        return 0
 
-        momentum = close.iloc[-1] - close.iloc[-10]
+    close = df["close"]
+
+    momentum = close.iloc[-1] - close.iloc[-10]
 
         if momentum > 0:
             return 1
