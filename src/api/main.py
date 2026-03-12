@@ -332,7 +332,7 @@ async def predict(request: PredictRequest):
 
         # reduce size if risk is high
         if isinstance(risk, dict) and risk.get("risk_level") == "high":
-            position_size *= 0.5
+        position_size *= 0.5
 
         position_size = round(position_size, 3)
 
