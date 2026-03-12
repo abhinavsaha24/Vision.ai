@@ -322,32 +322,48 @@ async def predict(request: PredictRequest):
 
         risk = risk_engine.calculate_risk(df)
 
+        # -----------------------------
+        # Position Sizing
+        # -----------------------------
+
+        base_position = 0.1  # 10% capital baseline
+
+        position_size = base_position * confidence
+
+        # reduce size if risk is high
+        if isinstance(risk, dict) and risk.get("risk_level") == "high":
+        position_size *= 0.5
+
+        position_size = round(position_size, 3)
+
         # -----------------------
         # Response
         # -----------------------
 
-        return {
+return {
 
-            "symbol": request.symbol,
+    "symbol": request.symbol,
 
-            "predictions": preds,
+    "predictions": preds,
 
-            "signal": signal_data["direction"],
+    "signal": signal_data["direction"],
 
-            "signal_score": signal_data["score"],
+    "signal_score": signal_data["score"],
 
-            "components": signal_data["signals"],
+    "components": signal_data["signals"],
 
-            "confidence": confidence,
+    "confidence": confidence,
 
-            "risk": risk,
+    "risk": risk,
 
-            "regime": regime,
+    "position_size": position_size,
 
-            "strategy": strategy
+    "regime": regime_detector.detect_regime(df),
 
-        }
-
+    "strategy": strategy_selector.select_strategy(
+        regime_detector.detect_regime(df)
+    )
+}
     except Exception as e:
 
         logger.error(f"Prediction error: {e}")

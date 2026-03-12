@@ -41,6 +41,7 @@ const [confidence,setConfidence] = useState(null);
 const [risk,setRisk] = useState(null);
 const [score,setScore] = useState(null);
 const [components,setComponents] = useState({});
+const [positionSize,setPositionSize] = useState(null);
 
 const [regime,setRegime] = useState({});
 const [strategy,setStrategy] = useState(null);
@@ -153,6 +154,7 @@ const getPredictions = useCallback(async () => {
     setComponents(data.components || {});
     setRegime(data.regime || {});
     setStrategy(data.strategy || null);
+    setPositionSize(data.position_size || null);
 
   } catch (err) {
 
@@ -320,29 +322,58 @@ Refresh Price
 <h3>AI Trading Intelligence</h3>
 
 <p>
-
 <b>Signal:</b>
 
-<span style={{
+<span
+style={{
 color:
-signal==="BUY"
+signal === "BUY"
 ? "#00ff9c"
-: signal==="SELL"
+: signal === "SELL"
 ? "#ff4d4d"
 : "#aaa",
-fontWeight:"bold",
-marginLeft:6
-}}>
-
-{signal || "--"}
-
+fontWeight: "bold",
+marginLeft: 6
+}}
+>
+{signal ?? "--"}
 </span>
 
 </p>
 
-<p>Confidence: {confidence || "--"}</p>
-<p>Risk Level: {risk || "--"}</p>
-<p>Signal Score: {score || "--"}</p>
+<p>
+<b>Position Size:</b>
+<span style={{ marginLeft: 6 }}>
+{positionSize !== null && positionSize !== undefined
+? `${positionSize} BTC`
+: "--"}
+</span>
+</p>
+
+<p>
+<b>Confidence:</b>
+<span style={{ marginLeft: 6 }}>
+{confidence !== null && confidence !== undefined
+? `${(confidence * 100).toFixed(1)}%`
+: "--"}
+</span>
+</p>
+
+<p>
+<b>Risk Level:</b>
+<span style={{ marginLeft: 6 }}>
+{risk?.risk_level ?? "Medium"}
+</span>
+</p>
+
+<p>
+<b>Signal Score:</b>
+<span style={{ marginLeft: 6 }}>
+{score !== null && score !== undefined
+? Number(score).toFixed(2)
+: "--"}
+</span>
+</p>
 
 </div>
 
@@ -353,13 +384,13 @@ marginLeft:6
 
 <h3>Market Regime</h3>
 
-<p>Trend: {regime?.trend || "--"}</p>
+<p>Trend: {regime?.trend ?? "--"}</p>
 
-<p>Volatility: {regime?.volatility || "--"}</p>
+<p>Volatility: {regime?.volatility ?? "--"}</p>
 
-<p>Momentum: {regime?.momentum || "--"}</p>
+<p>Momentum: {regime?.momentum ?? "--"}</p>
 
-<p>Active Strategy: {strategy || "--"}</p>
+<p>Active Strategy: {strategy ?? "--"}</p>
 
 </div>
 
@@ -370,19 +401,24 @@ marginLeft:6
 
 <h3>Signal Breakdown</h3>
 
-<p>AI Model: {signalText(components.ai)}</p>
-<p>Momentum: {signalText(components.momentum)}</p>
-<p>Mean Reversion: {signalText(components.mean_reversion)}</p>
-<p>Sentiment: {signalText(components.sentiment)}</p>
+<EquityCurve equity={[]} />
+
+<p>AI Model: {signalText(components?.ai)}</p>
+
+<p>Momentum: {signalText(components?.momentum)}</p>
+
+<p>Mean Reversion: {signalText(components?.mean_reversion)}</p>
+
+<p>Sentiment: {signalText(components?.sentiment)}</p>
 
 </div>
-
 
 <div style={styles.card}><Volume/></div>
 <div style={styles.card}><RSI/></div>
 
 <div style={styles.card}>
 <h3>Strategy Performance</h3>
+<Performance data={[]} />
 <Performance/>
 </div>
 

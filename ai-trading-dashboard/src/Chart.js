@@ -29,7 +29,11 @@ function Chart({ symbol = "BTCUSDT", predictions = [] }) {
       },
       crosshair: { mode: 1 },
       rightPriceScale: { borderColor: "#333" },
-      timeScale: { borderColor: "#333" }
+     timeScale:{
+borderColor:"#333",
+timeVisible:true,
+secondsVisible:false
+}
     });
 
     const candleSeries = chart.addCandlestickSeries({

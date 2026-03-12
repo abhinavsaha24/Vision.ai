@@ -1,43 +1,65 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
+import { createChart } from "lightweight-charts";
 
-function Performance() {
+function Performance({ data=[] }){
 
-  const stats = {
-    winRate: "63%",
-    sharpe: "1.8",
-    drawdown: "-7%",
-    totalReturn: "+24%"
-  };
+const chartRef = useRef();
+const containerRef = useRef();
 
-  const cardStyle = {
-    background: "#161616",
-    borderRadius: 10,
-    padding: 18,
-    marginBottom: 20,
-    border: "1px solid #2a2a2a",
-    boxShadow: "0 6px 15px rgba(0,0,0,0.4)",
-    color: "white",
-    width: "100%"
-  };
+useEffect(()=>{
 
-  return (
+if(!containerRef.current) return;
 
-    <div style={cardStyle}>
+const chart = createChart(containerRef.current,{
+height:250,
+layout:{
+background:{color:"#0b0b0b"},
+textColor:"#DDD"
+},
+grid:{
+vertLines:{color:"#1a1a1a"},
+horzLines:{color:"#1a1a1a"}
+},
+rightPriceScale:{
+borderColor:"#333"
+},
+timeScale:{
+borderColor:"#333",
+timeVisible:true
+}
+});
 
-      <h3 style={{ marginBottom: 15 }}>
-        Strategy Performance
-      </h3>
+const series = chart.addHistogramSeries({
+color:"#4CAF50"
+});
 
-      <p><b>Win Rate:</b> {stats.winRate}</p>
-      <p><b>Sharpe Ratio:</b> {stats.sharpe}</p>
-      <p><b>Max Drawdown:</b> {stats.drawdown}</p>
-      <p><b>Total Return:</b> {stats.totalReturn}</p>
+if(data.length>0){
+series.setData(data);
+}
 
-      {/* Equity Curve Chart */}
+chartRef.current = chart;
 
-    </div>
+return ()=> chart.remove();
 
-  );
+},[data]);
+
+return(
+
+<div style={{marginTop:20}}>
+
+<h3>Strategy Performance</h3>
+
+<div
+ref={containerRef}
+style={{
+width:"100%",
+height:250
+}}
+/>
+
+</div>
+
+);
 
 }
 
