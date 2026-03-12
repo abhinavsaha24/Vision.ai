@@ -34,7 +34,7 @@ const [time,setTime] = useState(new Date());
 
 const [loadingPred,setLoadingPred] = useState(false);
 const [loadingPrice,setLoadingPrice] = useState(false);
-const [setError] = useState(null);
+const [error, setError] = useState(null);
 
 const [signal,setSignal] = useState(null);
 const [confidence,setConfidence] = useState(null);
@@ -141,6 +141,7 @@ const getPredictions = useCallback(async () => {
     );
 
     const data = res.data;
+    console.log("Prediction API response:", data);
 
     if (!data || !data.predictions) {
       throw new Error("Invalid prediction response");
@@ -401,7 +402,9 @@ marginLeft: 6
 
 <h3>Signal Breakdown</h3>
 
-<EquityCurve equity={[]} />
+{predictions.length > 0 && (
+  <EquityCurve portfolio={portfolio} price={price} />
+)}
 
 <p>AI Model: {signalText(components?.ai)}</p>
 
@@ -418,8 +421,7 @@ marginLeft: 6
 
 <div style={styles.card}>
 <h3>Strategy Performance</h3>
-<Performance data={[]} />
-<Performance/>
+<Performance />
 </div>
 
 <div style={styles.card}>
