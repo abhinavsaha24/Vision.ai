@@ -44,7 +44,6 @@ class QuantSignalEngine:
 
 def momentum_signal(self, df):
 
-    # Safety check
     if "close" not in df.columns:
         return 0
 
@@ -55,13 +54,13 @@ def momentum_signal(self, df):
 
     momentum = close.iloc[-1] - close.iloc[-10]
 
-        if momentum > 0:
-            return 1
+    if momentum > 0:
+        return 1
 
-        if momentum < 0:
-            return -1
+    if momentum < 0:
+        return -1
 
-        return 0
+    return 0
 
     # -----------------------------
     # Mean Reversion (RSI)
