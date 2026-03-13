@@ -9,10 +9,10 @@ __pycache__/
 .env
 
 # logs
-logs/
+/logs/
 
-# data
-data/
+# data (root cache only, not backend/src/data/)
+/data/
 
 # frontend
 node_modules/
