@@ -98,7 +98,7 @@ function App() {
   const [riskDashboard, setRiskDashboard] = useState(null);
 
   // Portfolio
-  const [setPortfolio] = useState(null);
+  //const [setPortfolio] = useState(null);
   const [performance, setPerformance] = useState(null);
 
   // Paper trading
