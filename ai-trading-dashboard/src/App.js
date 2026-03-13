@@ -18,7 +18,7 @@ const API = (process.env.REACT_APP_API || "https://vision-ai-5qm1.onrender.com")
 /*  HELPER: API calls                            */
 /* ============================================ */
 
-const apiPost = async (path, data = {}, timeout = 12000) => {
+const apiPost = async (path, data = {}, timeout = 60000) => {
   try {
     const res = await axios.post(`${API}${path}`, data, { timeout });
     return res.data;
@@ -28,7 +28,7 @@ const apiPost = async (path, data = {}, timeout = 12000) => {
   }
 };
 
-const apiGet = async (path, timeout = 12000) => {
+const apiGet = async (path, timeout = 60000) => {
   try {
     const res = await axios.get(`${API}${path}`, { timeout });
     return res.data;
@@ -167,7 +167,7 @@ function App() {
   useEffect(() => {
     let cancelled = false;
     const check = async () => {
-      const res = await apiGet("/health", 15000);
+      const res = await apiGet("/health", 60000);
       if (cancelled) return;
       if (res?.status === "healthy" || res?.status === "ok") {
         setApiStatus(true);

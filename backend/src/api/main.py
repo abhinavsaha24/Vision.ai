@@ -112,14 +112,27 @@ app.add_middleware(RequestIDMiddleware)
 # CORS Configuration
 # --------------------------------------------------
 
+origins = [
+    "http://localhost:3000",
+    "https://visiontrading.vercel.app",
+    "https://visiontrading-a3fdz3sdy-abhinavsaha24s-projects.vercel.app"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# --------------------------------------------------
+# Handle browser preflight requests
+# --------------------------------------------------
+
+@app.options("/{rest_of_path:path}")
+async def options_handler(rest_of_path: str):
+    return JSONResponse({"status": "ok"})
 # --------------------------------------------------
 # Routers
 # --------------------------------------------------

@@ -1,9 +1,0 @@
-services:
-  - type: web
-    name: vision-ai-api
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: python -m backend.src.api.main
-    envVars:
-      - key: PORT
-        value: 10000
