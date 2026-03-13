@@ -20,20 +20,20 @@ const API = (process.env.REACT_APP_API || "https://vision-ai-5qm1.onrender.com")
 
 const apiPost = async (path, data = {}) => {
   try {
-    const res = await axios.post(`${API}${path}`, data, { timeout: 15000 });
+    const res = await axios.post(`${API}${path}`, data, { timeout: 30000 });
     return res.data;
   } catch (err) {
-    console.error(`API POST ${path}:`, err.message);
+    console.error(`API POST ${path} error:`, err.response?.data || err.message);
     return null;
   }
 };
 
 const apiGet = async (path) => {
   try {
-    const res = await axios.get(`${API}${path}`, { timeout: 10000 });
+    const res = await axios.get(`${API}${path}`, { timeout: 30000 });
     return res.data;
   } catch (err) {
-    console.error(`API GET ${path}:`, err.message);
+    console.error(`API GET ${path} error:`, err.response?.data || err.message);
     return null;
   }
 };
@@ -136,26 +136,30 @@ function App() {
 
   /* ---- Health Check ---- */
   useEffect(() => {
-    apiGet("/health").then(d => setApiStatus(!!d));
+    apiGet("/health").then(res => {
+      if (res?.status === "healthy" || res?.status === "ok") setApiStatus(true);
+      else setApiStatus(false);
+    });
   }, []);
 
   /* ---- AI Predictions ---- */
   const getPredictions = useCallback(async () => {
     setLoading(true);
     const data = await apiPost("/model/predict", { symbol, horizon: 5 });
-    if (data) {
-      setPredictions(data.predictions || []);
-      setSignal(data.signal || "HOLD");
-      setConfidence(data.confidence ?? null);
-      setRisk(data.risk || null);
-      setSignalScore(data.signal_score ?? null);
-      setComponents(data.components || {});
-      setRegime(data.regime || {});
-      setStrategy(data.strategy || null);
-      setPositionSize(data.position_size ?? null);
-      setSentiment(data.sentiment || {});
-    }
     setLoading(false);
+    
+    if (!data) return;
+
+    setPredictions(data.predictions || []);
+    setSignal(data.signal || "HOLD");
+    setConfidence(data.confidence ?? null);
+    setRisk(data.risk || null);
+    setSignalScore(data.signal_score ?? null);
+    setComponents(data.components || {});
+    setRegime(data.regime || {});
+    setStrategy(data.strategy || null);
+    setPositionSize(data.position_size ?? null);
+    setSentiment(data.sentiment || {});
   }, [symbol]);
 
   useEffect(() => {
