@@ -35,9 +35,11 @@ class Predictor:
 
         try:
             self.trainer.load(model_name)
+            self.model = getattr(self.trainer, "model", True)
             self._model_loaded = True
             logger.info(f"Predictor loaded model: {model_name}")
         except Exception as e:
+            self.model = None
             self._model_loaded = False
             logger.warning(f"Model not loaded: {e}")
 

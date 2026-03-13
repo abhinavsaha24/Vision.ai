@@ -432,8 +432,14 @@ async def predict(request: PredictRequest):
         }
 
     except Exception as e:
-        logger.error(f"Prediction error: {e}")
-        raise HTTPException(500, str(e))
+        logger.error(f"Prediction error: {e}", exc_info=True)
+        return {
+            "symbol": getattr(request, "symbol", "UNKNOWN"),
+            "signal": "HOLD",
+            "confidence": 0.5,
+            "position_size": 0,
+            "message": "fallback prediction"
+        }
 
 
 # ==================================================
