@@ -18,9 +18,9 @@ const API = (process.env.REACT_APP_API || "https://vision-ai-5qm1.onrender.com")
 /*  HELPER: API calls                            */
 /* ============================================ */
 
-const apiPost = async (path, data = {}) => {
+const apiPost = async (path, data = {}, timeout = 12000) => {
   try {
-    const res = await axios.post(`${API}${path}`, data, { timeout: 30000 });
+    const res = await axios.post(`${API}${path}`, data, { timeout });
     return res.data;
   } catch (err) {
     console.error(`API POST ${path} error:`, err.response?.data || err.message);
@@ -28,9 +28,9 @@ const apiPost = async (path, data = {}) => {
   }
 };
 
-const apiGet = async (path) => {
+const apiGet = async (path, timeout = 12000) => {
   try {
-    const res = await axios.get(`${API}${path}`, { timeout: 30000 });
+    const res = await axios.get(`${API}${path}`, { timeout });
     return res.data;
   } catch (err) {
     console.error(`API GET ${path} error:`, err.response?.data || err.message);
@@ -163,12 +163,21 @@ function App() {
     return () => clearInterval(iv);
   }, [getPrice]);
 
-  /* ---- Health Check ---- */
+  /* ---- Health Check (retries for Render cold-start) ---- */
   useEffect(() => {
-    apiGet("/health").then(res => {
-      if (res?.status === "healthy" || res?.status === "ok") setApiStatus(true);
-      else setApiStatus(false);
-    });
+    let cancelled = false;
+    const check = async () => {
+      const res = await apiGet("/health", 15000);
+      if (cancelled) return;
+      if (res?.status === "healthy" || res?.status === "ok") {
+        setApiStatus(true);
+      } else {
+        setApiStatus(false);
+        setTimeout(check, 5000); // retry in 5s (Render wake-up)
+      }
+    };
+    check();
+    return () => { cancelled = true; };
   }, []);
 
   /* ---- AI Predictions ---- */
@@ -197,34 +206,39 @@ function App() {
     return () => clearInterval(iv);
   }, [getPredictions]);
 
-  /* ---- Side Data ---- */
+  /* ---- Side Data (parallel, non-blocking) ---- */
   useEffect(() => {
     const load = async () => {
-      // Risk
       const sym = symbol.replace("USDT", "/USDT");
-      const rd = await apiGet(`/risk/status?symbol=${sym}`);
+
+      // Fire all requests in parallel — don't let one slow call block others
+      const [rdRes, perfRes, psRes, stRes, newsRes, ordersRes] = await Promise.allSettled([
+        apiGet(`/risk/status?symbol=${sym}`),
+        apiGet("/portfolio/performance"),
+        apiGet("/paper-trading/status"),
+        apiGet("/strategies/list"),
+        fetchNews().catch(() => []),
+        apiGet("/orders/history?limit=20"),
+      ]);
+
+      const val = (r) => r.status === "fulfilled" ? r.value : null;
+
+      const rd = val(rdRes);
       if (rd) setRiskDashboard(rd);
 
-      // Portfolio
-      const perf = await apiGet("/portfolio/performance");
+      const perf = val(perfRes);
       if (perf) setPerformance(perf);
 
-      // Paper trading
-      const ps = await apiGet("/paper-trading/status");
+      const ps = val(psRes);
       if (ps) setPaperStatus(ps);
 
-      // Strategies
-      const st = await apiGet("/strategies/list");
+      const st = val(stRes);
       if (st) setStrategies(st.strategies || []);
 
-      // News
-      try {
-        const items = await fetchNews();
-        setNews(items || []);
-      } catch { setNews([]); }
+      const items = val(newsRes);
+      setNews(items || []);
 
-      // Orders
-      const orders = await apiGet("/orders/history?limit=20");
+      const orders = val(ordersRes);
       if (orders) {
         setOrderHistory(orders.orders || []);
         setOrderStats(orders.statistics || null);
