@@ -98,7 +98,6 @@ function App() {
   const [riskDashboard, setRiskDashboard] = useState(null);
 
   // Portfolio
-  const [_portfolio, setPortfolio] = useState(null);
   const [performance, setPerformance] = useState(null);
 
   // Paper trading
@@ -174,8 +173,6 @@ function App() {
       if (rd) setRiskDashboard(rd);
 
       // Portfolio
-      const pf = await apiGet("/portfolio/status");
-      if (pf) setPortfolio(pf);
       const perf = await apiGet("/portfolio/performance");
       if (perf) setPerformance(perf);
 
