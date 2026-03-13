@@ -44,35 +44,35 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from src.data_collection.fetcher import DataFetcher
-from src.feature_engineering.indicators import FeatureEngineer
-from src.model_training.trainer import ModelTrainer
-from src.model_training.model_registry import ModelRegistry
-from src.backtesting.engine import BacktestEngine
-from src.prediction.predictor import Predictor
+from backend.src.data.fetcher import DataFetcher
+from backend.src.features.indicators import FeatureEngineer
+from backend.src.models.trainer import ModelTrainer
+from backend.src.models.model_registry import ModelRegistry
+from backend.src.research.backtesting_engine import BacktestEngine
+from backend.src.models.predictor import Predictor
 
-from src.quant.signal_engine import QuantSignalEngine
-from src.quant.confidence_engine import ConfidenceEngine
-from src.Risk_manager.risk_score import RiskScore
-from src.Risk_manager.risk_manager import RiskManager
+from backend.src.research.signal_engine import QuantSignalEngine
+from backend.src.risk.confidence_engine import ConfidenceEngine
+from backend.src.risk.risk_score import RiskScore
+from backend.src.risk.risk_manager import RiskManager
 
-from src.regime.regime_detector import MarketRegimeDetector
-from src.strategy.strategy_selector import StrategySelector
-from src.strategy.strategy_engine import StrategyEngine
+from backend.src.models.regime_detector import MarketRegimeDetector
+from backend.src.strategy.strategy_selector import StrategySelector
+from backend.src.strategy.strategy_engine import StrategyEngine
 
-from src.sentiment.sentiment_engine import SentimentEngine
-from src.Portfolio.portfolio_manager import PortfolioManager
-from src.Trading.trading_loop import TradingLoop
+from backend.src.sentiment.sentiment_engine import SentimentEngine
+from backend.src.portfolio.portfolio_manager import PortfolioManager
+from backend.src.workers.trading_loop import TradingLoop
 
-from src.Binance.exchange_adapter import PaperAdapter, BinanceAdapter
-from src.Execution.live_safety import LiveTradingSafety
-from src.core.health_monitor import HealthMonitor
-from src.core.structured_logger import setup_logging, set_correlation_id
+from backend.src.exchange.exchange_adapter import PaperAdapter, BinanceAdapter
+from backend.src.execution.live_safety import LiveTradingSafety
+from backend.src.core.health_monitor import HealthMonitor
+from backend.src.core.structured_logger import setup_logging, set_correlation_id
 
-from src.api.auth_routes import router as auth_router
-from src.api.news_service import NewsAggregator
+from backend.src.api.auth_routes import router as auth_router
+from backend.src.api.news_service import NewsAggregator
 
-from config.settings import settings
+from backend.src.core.config import settings
 
 
 # --------------------------------------------------
@@ -674,4 +674,4 @@ if __name__ == "__main__":
     import uvicorn
     # Make compatible with Render assigning dynamic $PORT
     port = int(os.environ.get("PORT", 10000))
-    uvicorn.run("src.api.main:app", host="0.0.0.0", port=port, reload=False)
+    uvicorn.run("backend.src.api.main:app", host="0.0.0.0", port=port, reload=False)

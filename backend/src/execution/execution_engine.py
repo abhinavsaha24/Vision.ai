@@ -16,8 +16,8 @@ import datetime
 from dataclasses import dataclass
 from typing import Dict, Optional
 
-from src.Binance.exchange_adapter import ExchangeAdapter, PaperAdapter, Order
-from src.Execution.order_manager import OrderManager
+from backend.src.exchange.exchange_adapter import ExchangeAdapter, PaperAdapter, Order
+from backend.src.execution.order_manager import OrderManager
 
 logger = logging.getLogger(__name__)
 

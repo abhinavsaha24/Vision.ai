@@ -18,15 +18,15 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Optional
 
-from src.data_collection.fetcher import DataFetcher
-from src.feature_engineering.indicators import FeatureEngineer
-from src.prediction.predictor import Predictor
-from src.strategy.strategy_engine import StrategyEngine
-from src.Risk_manager.risk_manager import RiskManager
-from src.Execution.execution_engine import ExecutionEngine
-from src.Portfolio.portfolio_manager import PortfolioManager
-from src.regime.regime_detector import MarketRegimeDetector
-from src.Binance.exchange_adapter import ExchangeAdapter, PaperAdapter
+from backend.src.data.fetcher import DataFetcher
+from backend.src.features.indicators import FeatureEngineer
+from backend.src.models.predictor import Predictor
+from backend.src.strategy.strategy_engine import StrategyEngine
+from backend.src.risk.risk_manager import RiskManager
+from backend.src.execution.execution_engine import ExecutionEngine
+from backend.src.portfolio.portfolio_manager import PortfolioManager
+from backend.src.models.regime_detector import MarketRegimeDetector
+from backend.src.exchange.exchange_adapter import ExchangeAdapter, PaperAdapter
 
 logger = logging.getLogger(__name__)
 

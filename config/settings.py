@@ -45,6 +45,15 @@ class Settings(BaseSettings):
     paper_trading_initial_cash: float = 10000
     paper_trading_interval: int = 300  # seconds
 
+    # --------------------------------------------------
+    # Live trading settings (safety-critical)
+    # --------------------------------------------------
+    trading_mode: str = "paper"              # "paper" (default) or "live"
+    live_trading_enabled: bool = False        # must be explicitly enabled
+    live_max_position_usd: float = 100.0     # tiny default cap
+    live_use_testnet: bool = True             # use Binance testnet by default
+    require_api_key_validation: bool = True   # validate keys before trading
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
