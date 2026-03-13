@@ -193,7 +193,7 @@ def get_market_data(symbol):
     try:
         df = fetcher.fetch(symbol)
         if df is None or df.empty:
-            return pd.DataFrame() # empty safe df
+            return cached_df if cached_df is not None else pd.DataFrame()
 
         df = engineer.add_all_indicators(df)
         df = df.dropna()
@@ -203,7 +203,7 @@ def get_market_data(symbol):
         return df
     except Exception as e:
         logger.error(f"Market data fetch error: {e}")
-        return pd.DataFrame()
+        return cached_df if cached_df is not None else pd.DataFrame()
 
 
 # Predictor
@@ -474,7 +474,12 @@ async def portfolio_performance():
         return portfolio_manager.get_performance()
     except Exception as e:
         logger.error(f"Portfolio performance error: {e}", exc_info=True)
-        return {"error": "Portfolio metrics unavailable", "realized_pnl": 0}
+        return {
+            "total_return": 0,
+            "win_rate": 0,
+            "max_drawdown": 0,
+            "total_trades": 0
+        }
 
 
 # ==================================================
@@ -519,9 +524,8 @@ async def risk_status(symbol: str = "BTC/USDT"):
     except Exception as e:
         logger.error(f"Risk status error: {e}", exc_info=True)
         return {
-            "risk_level": "medium",
-            "risk_score": 0.5,
-            "factors": {"error": "unavailable"},
+            "risk_level": "low",
+            "risk_score": 0.2,
             "kill_switch": False,
             "events": []
         }

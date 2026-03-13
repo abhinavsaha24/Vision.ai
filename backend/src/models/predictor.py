@@ -74,12 +74,12 @@ class Predictor:
             if not self._model_loaded:
                 logger.warning(f"No trained model available inside predict_symbol for {symbol}. Returning fallback 'HOLD'.")
                 return [{
-                    "step": 1,
+                    "step": i,
                     "direction": "HOLD",
                     "probability": 0.5,
                     "confidence": 0.5,
-                    "regime": regime.get("label", "unknown"),
-                }]
+                    "regime": "unknown"
+                } for i in range(1, horizon + 1)]
 
             # Ensure correct feature order
             feature_names = self.trainer.feature_names_
