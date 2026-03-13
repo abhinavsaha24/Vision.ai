@@ -69,12 +69,22 @@ class DataFetcher:
         except ccxt.NetworkError as e:
             print("Network error while fetching data:", e)
             time.sleep(2)
-            return self.fetch(symbol, timeframe, limit)
+            try:
+                # One retry
+                ohlcv = self.exchange.fetch_ohlcv(symbol=symbol, timeframe=timeframe, limit=limit)
+                df = pd.DataFrame(ohlcv, columns=["timestamp", "open", "high", "low", "close", "volume"])
+                df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
+                df.set_index("timestamp", inplace=True)
+                df = df.astype(float).sort_index()
+                return df[~df.index.duplicated(keep="last")].ffill()
+            except Exception as retry_err:
+                print(f"Retry fetch failed: {retry_err}")
+                return pd.DataFrame()
 
         except ccxt.ExchangeError as e:
             print("Exchange error:", e)
-            raise
+            return pd.DataFrame()
 
         except Exception as e:
             print("Data fetch failed:", e)
-            raise
+            return pd.DataFrame()

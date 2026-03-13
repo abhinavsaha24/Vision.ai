@@ -115,7 +115,8 @@ app.add_middleware(RequestIDMiddleware)
 origins = [
     "http://localhost:3000",
     "https://visiontrading.vercel.app",
-    "https://visiontrading-a3fdz3sdy-abhinavsaha24s-projects.vercel.app"
+    "https://visiontrading-a3fdz3sdy-abhinavsaha24s-projects.vercel.app",
+    "*"
 ]
 
 app.add_middleware(
@@ -125,6 +126,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --------------------------------------------------
+# Global Exception Handler
+# --------------------------------------------------
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled server error: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"error": "Internal server error", "detail": str(exc), "fallback": True}
+    )
 
 # --------------------------------------------------
 # Handle browser preflight requests
@@ -177,14 +190,20 @@ def get_market_data(symbol):
     if cached_df is not None and time.time() - last_update < 30:
         return cached_df
 
-    df = fetcher.fetch(symbol)
-    df = engineer.add_all_indicators(df)
-    df = df.dropna()
+    try:
+        df = fetcher.fetch(symbol)
+        if df is None or df.empty:
+            return pd.DataFrame() # empty safe df
 
-    cached_df = df
-    last_update = time.time()
+        df = engineer.add_all_indicators(df)
+        df = df.dropna()
 
-    return df
+        cached_df = df
+        last_update = time.time()
+        return df
+    except Exception as e:
+        logger.error(f"Market data fetch error: {e}")
+        return pd.DataFrame()
 
 
 # Predictor
@@ -339,18 +358,21 @@ async def train_model(request: TrainRequest):
 
 @app.post("/model/predict")
 async def predict(request: PredictRequest):
-    if predictor is None:
-        raise HTTPException(500, "Predictor not initialized")
-
     try:
         symbol = request.symbol.replace("USDT", "/USDT")
 
-        # ML Predictions
-        preds = predictor.predict_symbol(symbol=symbol, horizon=request.horizon)
-        probability = preds[0]["probability"] if preds else 0.5
-
         # Market Data
         df = get_market_data(symbol)
+        
+        if df is None or df.empty:
+            return {"error": "market data unavailable"}
+
+        # ML Predictions (Predictor handles missing models safely now)
+        preds = predictor.predict_symbol(symbol=symbol, horizon=request.horizon) if predictor else []
+        if not preds:
+            preds = [{"step": 1, "direction": "HOLD", "probability": 0.5, "confidence": 0.5, "regime": "unknown"}]
+        
+        probability = preds[0]["probability"]
 
         # Regime Detection
         regime = regime_detector.get_regime(df)
@@ -442,7 +464,11 @@ async def portfolio_status():
 
 @app.get("/portfolio/performance")
 async def portfolio_performance():
-    return portfolio_manager.get_performance()
+    try:
+        return portfolio_manager.get_performance()
+    except Exception as e:
+        logger.error(f"Portfolio performance error: {e}", exc_info=True)
+        return {"error": "Portfolio metrics unavailable", "realized_pnl": 0}
 
 
 # ==================================================
@@ -455,7 +481,8 @@ async def get_regime(symbol: str = "BTC/USDT"):
         df = get_market_data(symbol)
         return regime_detector.get_regime(df)
     except Exception as e:
-        raise HTTPException(500, str(e))
+        logger.error(f"Regime detection error: {e}", exc_info=True)
+        return {"label": "unknown", "trend": "default", "volatility": "unknown"}
 
 
 # ==================================================
@@ -467,7 +494,8 @@ async def get_sentiment():
     try:
         return sentiment_engine.get_sentiment()
     except Exception as e:
-        raise HTTPException(500, str(e))
+        logger.error(f"Sentiment analysis error: {e}", exc_info=True)
+        return {"score": 0.5, "label": "neutral"}
 
 
 # ==================================================
@@ -479,11 +507,18 @@ async def risk_status(symbol: str = "BTC/USDT"):
     try:
         df = get_market_data(symbol)
         risk = risk_score_engine.calculate_risk(df)
-        risk["kill_switch"] = risk_manager.kill_switch_active
-        risk["events"] = risk_manager.get_events(limit=10)
+        risk["kill_switch"] = risk_manager.kill_switch_active if risk_manager else False
+        risk["events"] = risk_manager.get_events(limit=10) if risk_manager else []
         return risk
     except Exception as e:
-        raise HTTPException(500, str(e))
+        logger.error(f"Risk status error: {e}", exc_info=True)
+        return {
+            "risk_level": "medium",
+            "risk_score": 0.5,
+            "factors": {"error": "unavailable"},
+            "kill_switch": False,
+            "events": []
+        }
 
 
 # ==================================================
@@ -543,9 +578,13 @@ async def stop_paper_trading():
 
 @app.get("/paper-trading/status")
 async def paper_trading_status():
-    if paper_trader is None:
-        return {"status": "not_initialized"}
-    return paper_trader.get_status()
+    try:
+        if paper_trader is None:
+            return {"status": "not_initialized"}
+        return paper_trader.get_status()
+    except Exception as e:
+        logger.error(f"Paper trading status error: {e}", exc_info=True)
+        return {"status": "error", "message": "Status unavailable"}
 
 
 # ==================================================
@@ -682,3 +721,10 @@ async def feature_importance():
 # ==================================================
 # Run Server
 # ==================================================
+
+if __name__ == "__main__":
+    import uvicorn
+    import os
+    
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run("backend.src.api.main:app", host="0.0.0.0", port=port, reload=False)

@@ -21,6 +21,13 @@ class RiskScore:
         factors = {}
         scores = []
 
+        if df is None or df.empty:
+            return {
+                "risk_level": "medium",
+                "risk_score": 0.5,
+                "factors": {"error": "no data"}
+            }
+
         # Volatility factor
         if "volatility_20" in df.columns:
             vol = float(df["volatility_20"].iloc[-1])
