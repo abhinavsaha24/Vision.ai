@@ -37,3 +37,12 @@ build/
 
 # models (optional if large)
 *.joblib
+ 
+# Environment variables
+.env
+.env.local
+.env.*
+
+# Required system files
+node_modules
+__pycache__

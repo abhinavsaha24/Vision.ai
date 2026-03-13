@@ -1,426 +1,140 @@
-# Vision-AI 
+# Vision AI
 
-Vision-AI is an AI-powered quantitative trading dashboard for crypto markets.
+Vision AI is an AI-powered cryptocurrency trading research platform that combines real-time market data, machine learning predictions, sentiment analysis, technical indicators, and trading strategies into a single integrated system.
 
-Features:
-• Real-time crypto market data
-• AI trading predictions
-• Strategy backtesting engine
-• Portfolio simulation
-• Risk management system
-• Trading dashboard with charts
+The system features a professional quant trading dashboard designed to give researchers and traders institutional-grade visibility into market conditions, AI signals, and active portfolio strategies.
 
-Tech Stack:
-Python
-FastAPI
-React
-Scikit-Learn
-LightGBM
-XGBoost
-CCXT
-WebSockets
+---
 
-Architecture:
-Frontend → React Dashboard
-Backend → FastAPI ML API
-Data → Binance + ML pipeline
+## 🚀 Features
 
-Goal:
-Build a research-grade quant trading platform similar to hedge-fund tools    
-************backend************
-https://vision-ai-5qm1.onrender.com/    
+* **Real-Time Market Data**: Live BTC price charts, volume histograms, and order book depth streamed via Binance WebSockets.
+* **AI Signal Predictions**: Machine learning models continuously predict short-term price movements alongside confidence scoring.
+* **Market Regime Detection**: Classifies current market conditions (trend, volatility, risk state) to dynamically adapt active trading strategies.
+* **Sentiment Analysis**: Aggregates and scores crypto market news using NLP (FinBERT) from multiple sources including CryptoPanic, NewsAPI, and Finnhub.
+* **Strategy Breakdown**: Monitors active strategies (e.g., Momentum, Mean Reversion) and visualizes multi-factor signal strength.
+* **Paper Trading Portfolio**: Risk-free execution engine that tracks performance metrics, win rates, and drawdowns.
 
-**********frontend********
-https://vision-ai-omega-umber.vercel.app/
+---
 
-Vision-AI — AI Quantitative Trading Platform
-Overview
+## 🏗️ System Architecture
 
-Vision-AI is a full-stack AI-powered quantitative trading platform designed to analyze financial markets, generate predictive signals, simulate strategies, and eventually execute automated trades.
+The platform follows a decoupled architecture:
+1. **Data Ingestion Layer**: Fetches historical data (REST) and live tick data (WebSockets) while aggregating global financial news.
+2. **Feature Engineering**: Calculates over 50 technical indicators and custom quantitative features based on the raw data.
+3. **ML Pipeline**: Uses tree-based models and NLP transformers to predict future price horizons and assign signal confidence.
+4. **Quant Engine**: Fuses AI signals with market regime classification to dynamically select the optimal trading strategy.
+5. **Execution Loop**: Simulated paper trading execution that records transactions and manages virtual portfolio risk.
+6. **Frontend Dashboard**: A React-based, low-latency UI that presents all metrics in a highly visual, institutional-style dark theme.
 
-The system combines machine learning, quantitative finance, real-time market data, and a modern trading dashboard to create a research-grade trading environment similar to platforms used by professional quant firms.
+---
 
-Vision-AI integrates:
+## 🛠️ Tech Stack
 
-real-time crypto market data
+### Backend
+* **Python** (Core Logic)
+* **FastAPI** (REST API)
+* **LightGBM** (Machine Learning)
+* **FinBERT** (NLP Sentiment)
+* **pandas & NumPy** (Data Processing)
 
-machine learning prediction models
+### Frontend
+* **React** (UI Framework)
+* **lightweight-charts** (TradingView canvas charts)
+* **WebSocket streams** (Real-time updates)
 
-algorithmic trading strategies
+### Data Sources
+* **Binance** (Price & Orderbook)
+* **Finnhub** (Market News)
+* **NewsAPI** (Global Headlines)
+* **CryptoPanic** (Crypto News)
+* **CoinGecko** (Trending Tokens)
+* **Glassnode** (On-chain signals)
 
-portfolio analytics
+---
 
-backtesting engine
+## ⚙️ Installation
 
-risk management system
-
-interactive trading dashboard
-
-The long-term goal is to evolve Vision-AI into a fully automated AI-driven trading infrastructure capable of real-time strategy execution and portfolio optimization.
-
-System Architecture
-React Dashboard (Frontend)
-        │
-        ▼
-FastAPI Trading API
-        │
-        ▼
-Strategy Engine
-        │
- ┌──────────────┬──────────────┬──────────────┐
- ▼              ▼              ▼
-Market Data   AI Models     News Sentiment
-(Binance WS)  (ML Pipeline) (NLP Engine)
-        │
-        ▼
-Risk Management
-        │
-        ▼
-Execution Engine
-        │
-        ▼
-Exchange Gateway (Binance)
-Current Progress
-Frontend (React Trading Dashboard)
-
-Implemented:
-
-Candlestick trading chart
-
-Order book visualization
-
-Portfolio panel
-
-Watchlist
-
-Risk dashboard
-
-PnL analytics
-
-Strategy performance panel
-
-Trade history
-
-AI prediction panel
-
-Market timeline
-
-News feed
-
-Deployment:
-
-Frontend hosted on Vercel
-Backend (FastAPI)
-
-Implemented API services:
-
-GET  /health
-POST /data/fetch
-POST /features/generate
-POST /model/train
-POST /model/predict
-POST /backtest/run
-
-Backend includes:
-
-feature engineering engine
-
-model training pipeline
-
-prediction service
-
-backtesting system
-
-strategy engine
-
-risk manager
-
-portfolio manager
-
-Deployment:
-
-Backend deployable on Render
-Machine Learning Pipeline
-
-Current model:
-
-RandomForest
-
-Planned ensemble:
-
-RandomForest
-XGBoost
-LightGBM
-LSTM
-Transformer models
-
-The AI system will combine predictions using ensemble voting and probability aggregation to generate high-confidence trading signals.
-
-Strategy Engine
-
-Currently implemented strategies:
-
-AI prediction strategy
-Momentum strategy
-Mean reversion strategy
-
-Future strategies:
-
-Trend following
-Volatility breakout
-Market regime switching
-Liquidity detection
-Order flow imbalance
-
-These strategies will be combined using multi-strategy voting mechanisms similar to professional quant funds.
-
-Real-Time Market Data
-
-Vision-AI uses Binance WebSocket streams to obtain real-time market data:
-
-BTCUSDT price feed
-order book depth
-candlestick streams
-
-Future data integrations:
-
-Derivatives market data
-on-chain analytics
-macro indicators
-alternative data
-News Sentiment Engine
-
-Planned integrations:
-
-CryptoPanic API
-NewsAPI
-Twitter sentiment
-GDELT data
-
-Natural language processing will convert news into bullish / bearish sentiment signals used by the strategy engine.
-
-Risk Management System
-
-Implemented controls:
-
-maximum position size
-maximum drawdown limits
-daily loss limits
-max open trades
-
-Future improvements:
-
-dynamic position sizing
-portfolio optimization
-volatility adjusted risk
-Trading Execution
-
-Current execution:
-
-paper trading simulation
-
-Future execution system:
-
-exchange API integration
-order management system
-risk throttling
-latency optimized execution
-
-Advanced architecture:
-
-FastAPI research layer
-C++ low latency execution engine
-exchange gateway
-Security
-
-Vision-AI will include secure authentication.
-
-Planned features:
-
-user signup / login
-JWT authentication
-secure API endpoints
-user database
-
-Sensitive keys are stored using environment variables.
-
-Required environment variables:
-
-BINANCE_API_KEY
-BINANCE_SECRET
-SECRET_KEY
-DATABASE_URL
-REACT_APP_API
-
-Exchange API keys must always:
-
-disable withdrawals
-enable IP restrictions
-be stored securely
-Database
-
-Current database:
-
-SQLite
-
-Future upgrade:
-
-PostgreSQL
-
-Stored data:
-
-users
-trades
-predictions
-portfolio history
-system logs
-
-Folder Structure
-
-vision-ai
-│
-├── ai-trading-dashboard
-│
-├── src
-│   ├── api
-│   ├── auth
-│   ├── backtesting
-│   ├── data_collection
-│   ├── feature_engineering
-│   ├── model_training
-│   ├── prediction
-│   ├── strategy
-│   ├── execution
-│   ├── portfolio
-│   ├── risk
-│   ├── sentiment
-│   ├── regime
-│   └── quant
-│
-├── models
-├── scripts
-├── config
-├── data
-├── logs
-│
-├── requirements.txt
-├── render.yaml
-├── LICENSE
-└── README.md
-Development Setup
-
-Clone the repository:
-
-git clone https://github.com/username/vision-ai.git
+### 1. Clone the repository
+```bash
+git clone https://github.com/abhinavsaha24/vision-ai.git
 cd vision-ai
+```
 
-Create virtual environment:
-
+### 2. Set up the Python Backend
+Create a virtual environment and install the dependencies:
+```bash
 python -m venv venv
-source venv/bin/activate
-
-Install dependencies:
-
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
+```
 
-Start backend server:
-
-uvicorn src.api.main:app --reload
-
-Run frontend:
-
+### 3. Set up the React Frontend
+Navigate to the dashboard directory and install node modules:
+```bash
 cd ai-trading-dashboard
 npm install
+```
+
+---
+
+## 🔐 Environment Variables
+
+The project uses `.env` files to securely load API keys. 
+
+1. Copy the example file to create your local `.env`:
+```bash
+cp .env.example .env
+```
+2. Open `.env` and fill in your keys (all except Binance are strictly necessary for full functionality, though CoinGecko and basic Binance endpoints work without keys):
+
+```ini
+HF_TOKEN=your_huggingface_token
+FINNHUB_KEY=your_finnhub_key
+NEWSAPI_KEY=your_newsapi_key
+CRYPTOPANIC_TOKEN=your_cryptopanic_token
+BINANCE_API_KEY=optional_binance_key
+BINANCE_SECRET=optional_binance_secret
+```
+*Note: The `.env` file is excluded from git to prevent accidental key leaks.*
+
+---
+
+## 🏃‍♂️ Running the Project
+
+You need two terminal windows to run both the backend API and the frontend UI.
+
+### Running the Backend
+In your first terminal (from the project root, with venv activated):
+```bash
+python -m src.database.init_database
+python -m src.api.main
+```
+The FastAPI backend will start on `http://localhost:10000`.
+
+### Running the Frontend
+In your second terminal:
+```bash
+cd ai-trading-dashboard
 npm start
-Deployment
+```
+The React development server will open the dashboard in your browser.
 
-Frontend:
+---
 
-Vercel
+## 🔮 Future Improvements
 
-Backend:
+* **Live Brokerage Execution**: Wiring the execution engine directly to Binance/Bybit API for live trading.
+* **Deep Reinforcement Learning**: Adding RL agents (PPO/DQN) for dynamic portfolio weight optimization.
+* **Options Pricing & Volatility Surface**: Expanding asset classes to include options and derivatives data.
+* **Backtesting UI**: Building out a dedicated historical backtesting interface in the standalone dashboard.
 
-Render
+---
 
-Future production infrastructure:
+## 👨‍💻 Author
 
-Docker
-Kubernetes
-AWS / GCP
-Roadmap
-Phase 1 — Platform Stabilization
+Created by **Abhinav Saha**
 
-fix websocket stability
-
-stabilize API endpoints
-
-improve dashboard UI
-
-strengthen error handling
-
-Phase 2 — AI System Expansion
-
-ensemble ML models
-
-market regime detection
-
-AI confidence scoring
-
-Phase 3 — Real-Time Trading Engine
-
-streaming data pipeline
-
-strategy orchestration
-
-advanced backtesting
-
-Phase 4 — Production Infrastructure
-
-authentication system
-
-PostgreSQL database
-
-monitoring & logging
-
-Phase 5 — Advanced Quant Platform
-
-C++ execution engine
-
-low latency order management
-
-portfolio optimization
-
-reinforcement learning trading agents
-
-Current Completion Status
-Prototype System        ✔ Complete
-Research Platform       ✔ Complete
-Stable Trading Engine   In Progress
-Production Platform     Planned
-
-Estimated completion:
-≈ 65%
-Disclaimer
-
-Vision-AI is a research and educational project.
-
-Automated trading involves financial risk.
-Always perform extensive testing before using real capital.
-
-Author
-Abhinav Saha
-Software Developer | Quant Research Enthusiast
-
-GitHub
-LinkedIn
-
-Next Step (Recommended)
-
-The next major upgrades that will significantly improve Vision-AI are:
-
-market regime AI
-news sentiment engine
-order flow analytics
-liquidity detection
-portfolio optimization
-
+* **GitHub**: [https://github.com/abhinavsaha24](https://github.com/abhinavsaha24)
+* **LinkedIn**: [https://linkedin.com/in/abhinavsaha24](https://linkedin.com/in/abhinavsaha24)
+* **Contact**: [abhinavsaha24@gmail.com](mailto:abhinavsaha24@gmail.com)
