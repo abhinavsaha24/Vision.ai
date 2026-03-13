@@ -12,7 +12,7 @@ import { fetchNews } from "./news";
 /*  API BASE                                     */
 /* ============================================ */
 
-const API = process.env.REACT_APP_API || "https://vision-ai-5qm1.onrender.com";
+const API = (process.env.REACT_APP_API || "https://vision-ai-5qm1.onrender.com").replace(/\/$/, "");
 
 /* ============================================ */
 /*  HELPER: API calls                            */
