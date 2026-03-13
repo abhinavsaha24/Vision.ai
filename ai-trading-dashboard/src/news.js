@@ -1,26 +1,33 @@
-export async function fetchNews(){
+/**
+ * news.js — Fetch news from backend (CORS-safe)
+ *
+ * FIX ERROR 4: All external API calls go through FastAPI backend.
+ * Frontend never calls CryptoPanic/Finnhub/NewsAPI directly.
+ * No API tokens exposed in frontend code.
+ */
 
- try{
+const API = process.env.REACT_APP_API || "http://localhost:10000";
 
- const res = await fetch(
-   "https://api.allorigins.win/raw?url=" +
-   encodeURIComponent(
-     "https://cryptopanic.com/api/developer/v2/posts/?auth_token=49641981207a1c63d81ea39a957c89ced5e5b805&currencies=BTC&public=true"
-   )
- );
+export async function fetchNews() {
+  try {
+    const res = await fetch(`${API}/news`, { timeout: 10000 });
 
- const data = await res.json();
+    if (!res.ok) {
+      console.warn("News API returned", res.status);
+      return [];
+    }
 
- return data.results.slice(0,5).map(n => ({
-   title:n.title,
-   url:n.url
- }));
+    const data = await res.json();
 
- }catch(e){
-
- console.error("News fetch error:",e);
- return [];
-
- }
-
+    return (data.articles || data.results || data || []).slice(0, 20).map((n) => ({
+      title: n.title || n.headline || "",
+      url: n.url || n.link || "#",
+      source: n.source || "Unknown",
+      sentiment: n.sentiment || null,
+      timestamp: n.timestamp || n.published_at || null,
+    }));
+  } catch (e) {
+    console.error("News fetch error:", e);
+    return [];
+  }
 }

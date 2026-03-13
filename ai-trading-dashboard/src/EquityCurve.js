@@ -1,69 +1,58 @@
-import React, { useEffect, useRef } from "react";
-import { createChart } from "lightweight-charts";
+import React from "react";
+import { Line } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  LineElement,
+  PointElement,
+  LinearScale,
+  CategoryScale,
+  Filler,
+  Tooltip,
+} from "chart.js";
 
-function EquityCurve({ equity = [] }) {
+ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip);
 
-const chartRef = useRef();
-const containerRef = useRef();
+function EquityCurve({ portfolio, price }) {
+  const equity = portfolio?.equity_curve || portfolio?.history?.map(t => t.equity) || [];
 
-useEffect(()=>{
+  if (equity.length < 2) {
+    return <div className="text-dim" style={{ fontSize: "0.8rem" }}>Not enough data</div>;
+  }
 
-if(!containerRef.current) return;
+  const data = {
+    labels: equity.map((_, i) => `${i}`),
+    datasets: [
+      {
+        label: "Equity",
+        data: equity.slice(-50),
+        borderColor: "#4a9eff",
+        backgroundColor: "rgba(74,158,255,0.08)",
+        borderWidth: 2,
+        tension: 0.4,
+        fill: true,
+        pointRadius: 0,
+      },
+    ],
+  };
 
-const chart = createChart(containerRef.current,{
-height:250,
-layout:{
-background:{color:"#0b0b0b"},
-textColor:"#DDD"
-},
-grid:{
-vertLines:{color:"#1a1a1a"},
-horzLines:{color:"#1a1a1a"}
-},
-rightPriceScale:{
-borderColor:"#333"
-},
-timeScale:{
-borderColor:"#333",
-timeVisible:true
-}
-});
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { mode: "index" } },
+    scales: {
+      x: { display: false },
+      y: {
+        grid: { color: "rgba(42,42,58,0.3)" },
+        ticks: { color: "#8888a0", font: { size: 10, family: "'JetBrains Mono'" } },
+      },
+    },
+  };
 
-const lineSeries = chart.addLineSeries({
-color:"#00ff9c",
-lineWidth:2
-});
-
-if(equity.length>0){
-lineSeries.setData(equity);
-}
-
-chartRef.current = chart;
-
-return ()=>{
-chart.remove();
-}
-
-},[equity]);
-
-return(
-
-<div style={{marginTop:20}}>
-
-<h3>Equity Curve</h3>
-
-<div
-ref={containerRef}
-style={{
-width:"100%",
-height:250
-}}
-/>
-
-</div>
-
-);
-
+  return (
+    <div style={{ height: 150 }}>
+      <Line data={data} options={options} />
+    </div>
+  );
 }
 
 export default EquityCurve;

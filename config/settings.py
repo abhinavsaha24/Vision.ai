@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from pydantic_settings import BaseSettings
+from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -9,20 +10,40 @@ class Settings(BaseSettings):
 
     # Data settings
     data_dir: Path = Path("data")
-    default_symbol: str = "AAPL"
+    default_symbol: str = "BTC/USDT"
     default_period: str = "1y"
+    default_timeframe: str = "5m"
 
     # Model settings
     model_dir: Path = Path("models")
     test_size: float = 0.2
     random_state: int = 42
+    model_name: str = "trading_model"
 
     # API settings
     api_host: str = "0.0.0.0"
-    api_port: int = 8000
+    api_port: int = 10000
 
     # Dashboard settings
     dashboard_port: int = 8501
+
+    # Exchange settings
+    binance_api_key: Optional[str] = None
+    binance_secret: Optional[str] = None
+
+    # Sentiment API keys
+    cryptopanic_token: str = "demo"
+    newsapi_key: Optional[str] = None
+
+    # Risk settings
+    max_position_size: float = 0.05
+    max_daily_loss: float = 0.05
+    max_drawdown: float = 0.20
+    max_open_trades: int = 5
+
+    # Paper trading
+    paper_trading_initial_cash: float = 10000
+    paper_trading_interval: int = 300  # seconds
 
     class Config:
         env_file = ".env"

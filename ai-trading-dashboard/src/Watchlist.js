@@ -1,80 +1,30 @@
-import React, { useState, useEffect,useCallback,useMemo } from "react";
-import axios from "axios";
+import React from "react";
 
 function Watchlist() {
+  const pairs = [
+    { sym: "BTC/USDT", type: "crypto" },
+    { sym: "ETH/USDT", type: "crypto" },
+    { sym: "SOL/USDT", type: "crypto" },
+    { sym: "BNB/USDT", type: "crypto" },
+    { sym: "XRP/USDT", type: "crypto" },
+    { sym: "ADA/USDT", type: "crypto" },
+    { sym: "AVAX/USDT", type: "crypto" },
+    { sym: "DOGE/USDT", type: "crypto" },
+  ];
 
-  const assets = useMemo(() => [
-  "BTCUSDT",
-  "ETHUSDT",
-  "SOLUSDT"
-], []);
-  const [prices, setPrices] = useState({});
-
- const loadPrices = useCallback(async () => {
-
-  try {
-
-    const res = await axios.get(
-      "https://api.binance.com/api/v3/ticker/price"
-    );
-
-    const data = res.data;
-
-    const newPrices = {};
-
-    assets.forEach(a => {
-
-      const match = data.find(d => d.symbol === a);
-
-      if(match){
-        newPrices[a] = match.price;
-      }
-
-    });
-
-    setPrices(newPrices);
-
-  } catch(err){
-    console.error(err);
-  }
-
-}, [assets]);
-
- useEffect(() => {
-
-  loadPrices();
-
-  const interval = setInterval(loadPrices, 30000);
-
-  return () => clearInterval(interval);
-
-}, [loadPrices]);
-
-
-return (
-
-  <div style={{ marginBottom:20 }}>
-
-    <h3>Watchlist</h3>
-
-    {assets.map(a => (
-
-      <div key={a} style={{ marginBottom:6 }}>
-
-        <b>{a.replace("USDT","")}</b>
-
-        {"  "}
-
-        ${prices[a] ? parseFloat(prices[a]).toFixed(2) : "--"}
-
+  return (
+    <div>
+      <div className="card-title">Watchlist</div>
+      <div className="space-y">
+        {pairs.map((p, i) => (
+          <div key={i} className="row-between" style={{ padding: "4px 0" }}>
+            <span style={{ fontSize: "0.8rem", fontWeight: 500 }}>{p.sym}</span>
+            <span className="tag tag-blue">{p.type}</span>
+          </div>
+        ))}
       </div>
-
-    ))}
-
-  </div>
-
-);
-
+    </div>
+  );
 }
 
 export default Watchlist;

@@ -1,66 +1,39 @@
-import React, { useEffect, useRef } from "react";
-import { createChart } from "lightweight-charts";
+import React from "react";
 
-function Performance({ data=[] }){
+function Performance({ portfolio, performance }) {
+  const perf = performance || {};
 
-const chartRef = useRef();
-const containerRef = useRef();
-
-useEffect(()=>{
-
-if(!containerRef.current) return;
-
-const chart = createChart(containerRef.current,{
-height:250,
-layout:{
-background:{color:"#0b0b0b"},
-textColor:"#DDD"
-},
-grid:{
-vertLines:{color:"#1a1a1a"},
-horzLines:{color:"#1a1a1a"}
-},
-rightPriceScale:{
-borderColor:"#333"
-},
-timeScale:{
-borderColor:"#333",
-timeVisible:true
-}
-});
-
-const series = chart.addHistogramSeries({
-color:"#4CAF50"
-});
-
-if(data.length>0){
-series.setData(data);
-}
-
-chartRef.current = chart;
-
-return ()=> chart.remove();
-
-},[data]);
-
-return(
-
-<div style={{marginTop:20}}>
-
-<h3>Strategy Performance</h3>
-
-<div
-ref={containerRef}
-style={{
-width:"100%",
-height:250
-}}
-/>
-
-</div>
-
-);
-
+  return (
+    <div>
+      <div className="card-title">Performance Metrics</div>
+      <div className="metric-grid">
+        <div className="metric">
+          <div className={`metric-value ${(perf.total_return || 0) >= 0 ? "text-green" : "text-red"}`}>
+            {perf.total_return != null ? `${(perf.total_return * 100).toFixed(2)}%` : "--"}
+          </div>
+          <div className="metric-label">Total Return</div>
+        </div>
+        <div className="metric">
+          <div className="metric-value text-blue">
+            {perf.win_rate != null ? `${(perf.win_rate * 100).toFixed(1)}%` : "--"}
+          </div>
+          <div className="metric-label">Win Rate</div>
+        </div>
+        <div className="metric">
+          <div className="metric-value text-red">
+            {perf.max_drawdown != null ? `${(perf.max_drawdown * 100).toFixed(2)}%` : "--"}
+          </div>
+          <div className="metric-label">Max DD</div>
+        </div>
+        <div className="metric">
+          <div className="metric-value text-purple">
+            {perf.total_trades || 0}
+          </div>
+          <div className="metric-label">Total Trades</div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default Performance;

@@ -76,3 +76,23 @@ scikit-learn
 fastapi
 uvicorn
 websockets
+
+# ================================================
+# New dependencies for Vision-AI v2.0
+# ================================================
+
+# Deep Learning (optional — system works without)
+# torch>=2.0
+# transformers>=4.30
+
+# Regime Detection
+hmmlearn>=0.3
+
+# Model Explainability
+shap>=0.42
+
+# Statistical Analysis
+statsmodels>=0.14
+
+# Optimization
+scipy>=1.10

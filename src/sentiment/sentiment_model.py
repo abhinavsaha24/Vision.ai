@@ -1,21 +1,21 @@
-from textblob import TextBlob
+"""
+Sentiment model wrapper — auto-selects best available model.
+"""
+
+from __future__ import annotations
+
+from src.sentiment.nlp_model import create_sentiment_model
 
 
 class SentimentModel:
+    """Wraps the best available sentiment model."""
+
+    def __init__(self):
+        self.model = create_sentiment_model()
 
     def analyze(self, headlines):
-
+        """Analyze sentiment for a list of headline strings."""
         if not headlines:
-            return 0
+            return {"score": 0.0, "label": "neutral", "details": []}
 
-        scores = []
-
-        for text in headlines:
-
-            blob = TextBlob(text)
-
-            scores.append(blob.sentiment.polarity)
-
-        sentiment = sum(scores) / len(scores)
-
-        return sentiment
+        return self.model.analyze(headlines)

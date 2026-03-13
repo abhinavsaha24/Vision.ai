@@ -1,54 +1,42 @@
 import React from "react";
 
 function PnLDashboard({ portfolio, price }) {
+  if (!portfolio) return null;
 
-const equity = price
-? portfolio.cash + portfolio.btc * price
-: portfolio.cash;
+  const cash = portfolio.cash || 0;
+  const btc = portfolio.btc || 0;
+  const totalValue = cash + (btc * (price || 0));
+  const initialCapital = 10000;
+  const pnl = totalValue - initialCapital;
+  const pnlPct = initialCapital > 0 ? (pnl / initialCapital) * 100 : 0;
 
-const pnl = equity - 10000;
-
-const totalTrades = portfolio.history.length;
-
-const wins = portfolio.history.filter(
-t => t.type === "SELL"
-).length;
-
-const winRate = totalTrades
-? ((wins / totalTrades) * 100).toFixed(1)
-: 0;
-
-return (
-
-<div>
-
-<h3>PnL Analytics</h3>
-
-<p>
-<b>Total Equity:</b> ${equity.toFixed(2)}
-</p>
-
-<p>
-<b>Total PnL:</b>
-<span style={{
-color: pnl >= 0 ? "#00ff9c" : "#ff4d4d"
-}}>
-${pnl.toFixed(2)}
-</span>
-</p>
-
-<p>
-<b>Total Trades:</b> {totalTrades}
-</p>
-
-<p>
-<b>Win Rate:</b> {winRate}%
-</p>
-
-</div>
-
-);
-
+  return (
+    <div>
+      <div className="card-title">P&L Dashboard</div>
+      <div className="metric-grid">
+        <div className="metric">
+          <div className={`metric-value ${pnl >= 0 ? "text-green" : "text-red"}`}>
+            ${pnl.toFixed(2)}
+          </div>
+          <div className="metric-label">Unrealized P&L</div>
+        </div>
+        <div className="metric">
+          <div className={`metric-value ${pnlPct >= 0 ? "text-green" : "text-red"}`}>
+            {pnlPct.toFixed(2)}%
+          </div>
+          <div className="metric-label">Return</div>
+        </div>
+      </div>
+      <div style={{ marginTop: 8 }}>
+        <div className="row-between">
+          <span className="metric-label">Total Value</span>
+          <span className="text-cyan" style={{ fontFamily: "'JetBrains Mono'", fontSize: "0.85rem" }}>
+            ${totalValue.toFixed(2)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default PnLDashboard;

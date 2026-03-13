@@ -1,36 +1,32 @@
 import React from "react";
 
-function MarketTimeline(){
+function MarketTimeline() {
+  const events = [
+    { time: "Now", event: "AI model running", status: "active" },
+    { time: "Every 30s", event: "Price refresh", status: "active" },
+    { time: "Every 60s", event: "News + sentiment update", status: "active" },
+    { time: "On demand", event: "Model retraining", status: "idle" },
+    { time: "On demand", event: "Backtesting", status: "idle" },
+  ];
 
-return(
-
-<div style={{
-background:"#121212",
-borderRadius:12,
-padding:18,
-marginBottom:20,
-border:"1px solid #262626"
-}}>
-
-<h3>Market Timeline</h3>
-
-<p>🇮🇳 India Market</p>
-<p>9:15 AM — 3:30 PM</p>
-
-<br/>
-
-<p>🇺🇸 US Market</p>
-<p>9:30 AM — 4:00 PM</p>
-
-<br/>
-
-<p>₿ Crypto Market</p>
-<p>24 Hours</p>
-
-</div>
-
-);
-
+  return (
+    <div>
+      <div className="card-title">System Timeline</div>
+      <div className="space-y">
+        {events.map((e, i) => (
+          <div key={i} className="row-between" style={{ padding: "3px 0" }}>
+            <div>
+              <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{e.time}</span>
+              <span style={{ fontSize: "0.78rem", marginLeft: 8 }}>{e.event}</span>
+            </div>
+            <span className={`tag tag-${e.status === "active" ? "green" : "blue"}`}>
+              {e.status}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default MarketTimeline;
