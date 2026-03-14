@@ -118,18 +118,16 @@ app.add_middleware(RateLimiterMiddleware, max_requests=60, window_seconds=60)
 # --------------------------------------------------
 # CORS Configuration
 # --------------------------------------------------
-
-origins = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "https://visiontrading.vercel.app",
-    "https://visiontrading-a3fdz3sdy-abhinavsaha24s-projects.vercel.app",
-    "https://visiontrading-oof0047z4-abhinavsaha24s-projects.vercel.app",  # current deployment
-]
+# Use allow_origin_regex so EVERY Vercel preview URL is
+# automatically allowed — no more manual additions per deploy.
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+    ],
+    allow_origin_regex=r"https://visiontrading.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -148,13 +146,8 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"error": "Internal server error", "detail": str(exc), "fallback": True}
     )
 
-# --------------------------------------------------
-# Handle browser preflight requests
-# --------------------------------------------------
-
-@app.options("/{rest_of_path:path}")
-async def options_handler(rest_of_path: str):
-    return JSONResponse({"status": "ok"})
+# NOTE: Preflight OPTIONS handling is done by CORSMiddleware above.
+# Do NOT add a custom @app.options handler — it bypasses CORS headers.
 # --------------------------------------------------
 # Routers
 # --------------------------------------------------

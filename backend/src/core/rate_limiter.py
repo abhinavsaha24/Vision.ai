@@ -44,8 +44,8 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
         try:
             path = request.url.path
 
-            # Skip excluded paths
-            if any(path.startswith(ep) for ep in self.exclude_paths):
+            # Skip excluded paths and preflight OPTIONS requests
+            if request.method == "OPTIONS" or any(path.startswith(ep) for ep in self.exclude_paths):
                 return await call_next(request)
 
             # Get client IP
