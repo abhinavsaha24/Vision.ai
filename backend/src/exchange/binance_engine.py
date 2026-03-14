@@ -5,7 +5,7 @@ class BinanceEngine:
 
     def __init__(self, api_key: str, secret: str):
 
-        self.exchange = ccxt.binance({
+        self.exchange = ccxt.binanceus({
             "apiKey": api_key,
             "secret": secret,
             "enableRateLimit": True,

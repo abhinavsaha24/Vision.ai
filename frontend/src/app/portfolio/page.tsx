@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Wallet, TrendingUp, TrendingDown, Layers } from "lucide-react";
 import { PaperTradingControl } from "@/components/portfolio/PaperTradingControl";
 import { OrderHistoryTable } from "@/components/portfolio/OrderHistoryTable";
+import { DailyPnLCurve } from "@/components/portfolio/DailyPnLCurve";
 
 export default function PortfolioPage() {
   const { portfolioStatus } = useSignalStore();
@@ -60,7 +61,7 @@ export default function PortfolioPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-white h-[500px]">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-white h-[800px] mb-8">
         <div className="lg:col-span-1 flex flex-col gap-6">
           <PaperTradingControl />
           
@@ -80,6 +81,10 @@ export default function PortfolioPage() {
               )}
             </CardContent>
           </Card>
+
+          <div className="flex-1 min-h-[300px] max-h-[400px]">
+             <DailyPnLCurve />
+          </div>
         </div>
 
         <div className="lg:col-span-2">

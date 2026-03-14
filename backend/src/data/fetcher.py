@@ -34,7 +34,7 @@ except Exception as e:
 class DataFetcher:
 
     def __init__(self):
-        self.exchange = ccxt.binance({
+        self.exchange = ccxt.binanceus({
             "enableRateLimit": True,
             "options": {
                 "defaultType": "spot"

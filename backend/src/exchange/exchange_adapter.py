@@ -306,7 +306,7 @@ class BinanceAdapter(ExchangeAdapter):
                 }
             }
 
-        self.exchange = ccxt.binance(config)
+        self.exchange = ccxt.binanceus(config)
         self.testnet = testnet
         self._order_cache: Dict[str, Order] = {}
 

@@ -10,7 +10,7 @@ export function TVChart() {
   const candlestickSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
 
-  const { livePrice, historicalData } = useMarketStore();
+  const { liveKline, historicalData } = useMarketStore();
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -82,17 +82,17 @@ export function TVChart() {
 
   // Update real-time 
   useEffect(() => {
-    if (candlestickSeriesRef.current && volumeSeriesRef.current && useMarketStore.getState().livePrice !== null) {
-      // In a real implementation, we should get the full kline object from store 
-      // instead of just `livePrice` to update the candlestick properly.
-      // We will rely on wsService directly updating the chart or the store holding `liveKline`.
+    if (candlestickSeriesRef.current && volumeSeriesRef.current && liveKline) {
+      // lightweight-charts needs time in seconds or string format
+      candlestickSeriesRef.current.update(liveKline as any);
       
-      // I'll grab the last known update directly via store subscription or similar,
-      // but the `useMarketStore` doesn't currently store the whole live kline, just `livePrice`.
-      // Let's listen to wsService directly for ease of charting updates, 
-      // or we can modify the store to hold a `lastUpdatedKline` object.
+      volumeSeriesRef.current.update({
+        time: liveKline.time,
+        value: liveKline.volume,
+        color: liveKline.close >= liveKline.open ? '#059669' : '#e11d48'
+      } as any);
     }
-  }, [livePrice]);
+  }, [liveKline]);
 
   return (
     <div className="w-full h-full min-h-[400px] flex flex-col rounded-xl border border-slate-800 bg-slate-900/50 backdrop-blur-xl overflow-hidden shadow">
