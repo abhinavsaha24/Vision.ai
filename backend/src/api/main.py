@@ -123,11 +123,7 @@ app.add_middleware(RateLimiterMiddleware, max_requests=60, window_seconds=60)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-    ],
-    allow_origin_regex=r"https://visiontrading.*\.vercel\.app",
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
