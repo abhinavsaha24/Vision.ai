@@ -96,7 +96,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0F172A] text-[#F8FAFC] flex flex-col pt-2 pb-6 selection:bg-trade-green/30">
+    <div className="min-h-screen bg-[#0b1220] text-[#F8FAFC] flex flex-col pt-2 pb-6 selection:bg-trade-green/30">
       
       <Header apiHealth={health} market={market} setMarket={setMarket} />
 
