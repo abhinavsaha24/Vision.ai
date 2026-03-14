@@ -30,7 +30,9 @@ export default function NewsPanel({ newsData, loading }) {
           <div className="text-xs font-mono text-dark-muted italic p-4 text-center">No recent news found</div>
         ) : (
           articles.map((article, index) => {
-            const timeAgo = Math.floor((new Date() - new Date(article.published_at)) / 1000 / 60);
+            const pubDate = new Date(article.published_at || article.timestamp || Date.now());
+            let timeAgo = Math.floor((new Date() - pubDate) / 1000 / 60);
+            if (isNaN(timeAgo) || timeAgo < 0) timeAgo = 0;
             
             return (
               <a 

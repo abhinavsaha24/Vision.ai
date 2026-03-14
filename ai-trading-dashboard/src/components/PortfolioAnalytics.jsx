@@ -45,8 +45,13 @@ export default function PortfolioAnalytics({ portfolioData, loading }) {
             <Target className="w-4 h-4" />
             <span>WIN RATE</span>
           </div>
-          <div className="text-2xl font-bold font-mono tracking-wider text-white">
-            {(win_rate * 100).toFixed(1)}%
+          <div className="flex flex-col mt-auto gap-2">
+            <div className="text-2xl font-bold font-mono tracking-wider text-white leading-none">
+              {(win_rate * 100).toFixed(1)}%
+            </div>
+            <div className="w-full h-1 bg-dark-border rounded-full overflow-hidden">
+              <div className="h-full bg-trade-green" style={{ width: `${win_rate * 100}%` }} />
+            </div>
           </div>
         </div>
 
@@ -56,8 +61,13 @@ export default function PortfolioAnalytics({ portfolioData, loading }) {
             <Activity className="w-4 h-4" />
             <span>MAX DRAWDOWN</span>
           </div>
-          <div className="text-2xl font-bold font-mono tracking-wider text-trade-red">
-            {(max_drawdown * 100).toFixed(2)}%
+          <div className="flex flex-col mt-auto gap-2">
+            <div className="text-2xl font-bold font-mono tracking-wider text-trade-red leading-none">
+              {(max_drawdown * 100).toFixed(2)}%
+            </div>
+            <div className="w-full h-1 bg-dark-border rounded-full overflow-hidden">
+              <div className="h-full bg-trade-red" style={{ width: `${Math.min(max_drawdown * 100, 100)}%` }} />
+            </div>
           </div>
         </div>
 

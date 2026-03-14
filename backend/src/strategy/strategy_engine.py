@@ -162,6 +162,10 @@ class StrategyEngine:
             self.strategies[name] = None
             return None
 
+    def _get_default_weight(self, name: str) -> float:
+        """Return the default regime weight for a strategy."""
+        return REGIME_WEIGHTS.get("default", {}).get(name, 0.0)
+
     def _safe_signal(self, strategy, *args, **kwargs) -> int:
         """Get signal from a strategy, returning 0 if strategy is None."""
         if strategy is None:
