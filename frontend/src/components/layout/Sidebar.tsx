@@ -59,11 +59,11 @@ export function Sidebar() {
       <div className="mt-auto px-2 py-4 border-t border-slate-800">
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center">
-            <span className="text-sm font-medium text-slate-300">TS</span>
+            <span className="text-sm font-medium text-slate-300">A</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-medium text-slate-200">Trader User</span>
-            <span className="text-xs text-slate-500">Pro Tier</span>
+            <span className="text-sm font-medium text-slate-200">Abhinav Saha</span>
+            <span className="text-xs text-indigo-400 font-semibold tracking-wider uppercase">Admin</span>
           </div>
         </div>
       </div>

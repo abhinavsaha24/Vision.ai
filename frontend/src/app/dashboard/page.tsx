@@ -6,8 +6,6 @@ import { useMarketStore } from "@/store/marketStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TVChart } from "@/components/charts/TVChart";
-import { StrategyTable } from "@/components/dashboard/StrategyTable";
-import { NewsFeed } from "@/components/dashboard/NewsFeed";
 import { OrderBook } from "@/components/dashboard/OrderBook";
 import { Activity, BrainCircuit, Wallet, TrendingUp, AlertTriangle } from "lucide-react";
 
@@ -116,47 +114,13 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-12 lg:col-span-8 flex flex-col gap-4">
-          <div className="h-[400px]">
+          <div className="h-[600px]">
             <TVChart />
-          </div>
-          <div className="flex-1 h-[250px]">
-            <NewsFeed />
           </div>
         </div>
 
         <div className="col-span-12 lg:col-span-4 flex flex-col gap-4">
-          <Card className="flex-1">
-            <CardHeader>
-              <CardTitle>AI Market Intelligence</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                <span className="text-sm text-slate-400">Market Regime</span>
-                <span className="text-sm font-mono text-slate-200 capitalize">{typeof prediction?.regime === 'object' ? (prediction?.regime as any)?.label : (prediction?.regime || 'Unknown')}</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                <span className="text-sm text-slate-400">ML Probability (Up)</span>
-                <span className="text-sm font-mono text-slate-200">
-                  {prediction?.probability 
-                    ? (prediction.probability * 100).toFixed(1) + '%' 
-                    : '--'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center pb-2">
-                <span className="text-sm text-slate-400">News Sentiment</span>
-                <span className="text-sm font-mono text-slate-200 capitalize">
-                  {/* TODO: Connect to explicit sentiment API if needed */}
-                  Neutral
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex-1">
-            <StrategyTable />
-          </div>
-
-          <div className="h-[400px]">
+          <div className="h-[600px]">
             <OrderBook />
           </div>
         </div>

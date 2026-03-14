@@ -6,6 +6,8 @@ import { useMarketStore } from "@/store/marketStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BrainCircuit, ActivitySquare, AlertCircle } from "lucide-react";
+import { StrategyTable } from "@/components/dashboard/StrategyTable";
+import { NewsFeed } from "@/components/dashboard/NewsFeed";
 
 export default function SignalsPage() {
   const { symbol } = useMarketStore();
@@ -68,20 +70,39 @@ export default function SignalsPage() {
         </Card>
 
         {/* Signal Components */}
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle className="text-lg">Signal Components</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Components data is now managed backend-side without passing all details, providing fallback UI */}
-              <div className="col-span-full py-8 text-center text-slate-500">
-                <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                Detailed components are currently hidden
+        <div className="lg:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="flex-1 h-full">
+            <CardHeader>
+              <CardTitle>AI Market Intelligence</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+                <span className="text-sm text-slate-400">Market Regime</span>
+                <span className="text-sm font-mono text-slate-200 capitalize">{typeof prediction?.regime === 'object' ? (prediction?.regime as any)?.label : (prediction?.regime || 'Unknown')}</span>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+              <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+                <span className="text-sm text-slate-400">ML Probability (Up)</span>
+                <span className="text-sm font-mono text-slate-200">
+                  {prediction?.probability 
+                    ? (prediction.probability * 100).toFixed(1) + '%' 
+                    : '--'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center pb-2">
+                <span className="text-sm text-slate-400">News Sentiment</span>
+                <span className="text-sm font-mono text-slate-200 capitalize">Neutral</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex-1 h-full">
+            <StrategyTable />
+          </div>
+
+          <div className="col-span-1 lg:col-span-2 h-[300px]">
+            <NewsFeed />
+          </div>
+        </div>
       </div>
     </div>
   );
