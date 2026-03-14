@@ -6,11 +6,11 @@ export function Footer() {
           Made by Abhinav Saha
         </p>
         <div className="flex items-center gap-4 text-xs text-slate-400">
-          <a href="#" className="hover:text-indigo-400 transition-colors">LinkedIn</a>
+          <a href="https://linkedin.com/in/abhinavsaha24" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors">LinkedIn</a>
           <span className="text-slate-700">|</span>
-          <a href="#" className="hover:text-indigo-400 transition-colors">GitHub</a>
+          <a href="https://github.com/abhinavsaha24" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors">GitHub</a>
           <span className="text-slate-700">|</span>
-          <a href="mailto:contact@example.com" className="hover:text-indigo-400 transition-colors">Email</a>
+          <a href="mailto:abhinavsaha24@gmail.com" className="hover:text-indigo-400 transition-colors">Email</a>
         </div>
         <p className="text-[10px] text-slate-500 font-mono mt-1">
           &copy; 2026 Vision AI

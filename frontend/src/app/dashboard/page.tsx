@@ -132,7 +132,7 @@ export default function DashboardPage() {
             <CardContent className="flex flex-col gap-4">
               <div className="flex justify-between items-center border-b border-slate-800 pb-2">
                 <span className="text-sm text-slate-400">Market Regime</span>
-                <span className="text-sm font-mono text-slate-200 capitalize">{prediction?.regime || 'Unknown'}</span>
+                <span className="text-sm font-mono text-slate-200 capitalize">{typeof prediction?.regime === 'object' ? prediction?.regime?.label : (prediction?.regime || 'Unknown')}</span>
               </div>
               <div className="flex justify-between items-center border-b border-slate-800 pb-2">
                 <span className="text-sm text-slate-400">ML Probability (Up)</span>
