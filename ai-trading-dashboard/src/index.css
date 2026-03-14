@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    background: linear-gradient(180deg, #0b1220, #020617);
+    background: #0b1220;
     color: #e2e8f0;
     @apply font-sans antialiased overflow-x-hidden min-h-screen;
   }
@@ -12,8 +12,8 @@
 
 @layer components {
   .panel {
-    background: #0f172a;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: #0f172a; /* Tailwind slate-900 */
+    border: 1px solid #1e293b; /* Tailwind slate-800 */
     border-radius: 12px;
     padding: 18px;
     display: flex;

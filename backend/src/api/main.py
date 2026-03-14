@@ -124,6 +124,7 @@ origins = [
     "http://localhost:5173",
     "https://visiontrading.vercel.app",
     "https://visiontrading-a3fdz3sdy-abhinavsaha24s-projects.vercel.app",
+    "https://visiontrading-oof0047z4-abhinavsaha24s-projects.vercel.app",  # current deployment
 ]
 
 app.add_middleware(
@@ -472,6 +473,77 @@ async def predict(request: PredictRequest):
             "position_size": 0,
             "message": "fallback prediction"
         }
+
+
+async def _run_prediction(symbol: str, horizon: int):
+    """Shared prediction logic used by both GET and POST endpoints."""
+    try:
+        clean_symbol = symbol.replace("USDT", "/USDT")
+        logger.info("Prediction requested for %s (horizon=%d)", symbol, horizon)
+
+        df = get_market_data(clean_symbol)
+        if df is None or df.empty:
+            return {"symbol": symbol, "signal": "HOLD", "confidence": 0.5, "position_size": 0, "message": "market data unavailable"}
+
+        preds = predictor.predict_symbol(symbol=clean_symbol, horizon=horizon) if predictor else []
+        if not preds:
+            preds = [{"step": 1, "direction": "HOLD", "probability": 0.5, "confidence": 0.5, "regime": "unknown"}]
+
+        probability = preds[0]["probability"]
+        regime = regime_detector.get_regime(df)
+        strategy = strategy_selector.select_strategy(regime)
+        strategy_result = strategy_engine.generate_detailed_signal(df, preds[0] if preds else {"probability": 0.5}, regime)
+
+        _se = _get_sentiment_engine()
+        sentiment = _se.get_sentiment() if _se else {"score": 0.0, "label": "neutral"}
+        sentiment_score = sentiment.get("score", 0)
+
+        signal_data = signal_engine.generate_signal(
+            df, preds[0] if preds else {"probability": 0.5},
+            sentiment_score=sentiment_score, regime=regime, strategy_result=strategy_result,
+        )
+        confidence = confidence_engine.calculate_confidence(
+            probability=probability, regime=regime,
+            volatility_regime=regime.get("volatility", "low_volatility"),
+        )
+        risk = risk_score_engine.calculate_risk(df)
+
+        base_position = 0.1
+        position_size = base_position * confidence
+        if isinstance(risk, dict) and risk.get("risk_level") == "high":
+            position_size *= 0.5
+        position_size = round(position_size, 3)
+
+        return {
+            "symbol": symbol,
+            "predictions": preds,
+            "signal": signal_data["direction"],
+            "signal_score": signal_data["score"],
+            "signal_confidence": signal_data["confidence"],
+            "components": signal_data["signals"],
+            "strategy": strategy_result,
+            "confidence": confidence,
+            "risk": risk,
+            "position_size": position_size,
+            "regime": regime,
+            "sentiment": {"score": sentiment_score, "label": sentiment.get("label", "neutral")},
+        }
+    except Exception as e:
+        logger.error(f"Prediction error: {e}", exc_info=True)
+        return {
+            "symbol": symbol,
+            "signal": "HOLD",
+            "confidence": 0.5,
+            "position_size": 0,
+            "message": "fallback prediction"
+        }
+
+
+@app.get("/model/predict")
+async def predict_get(symbol: str = "BTCUSDT", horizon: int = 5):
+    """GET variant of predict — accepts query params for browser/fetch compatibility."""
+    logger.info("GET /model/predict called for %s", symbol)
+    return await _run_prediction(symbol, horizon)
 
 
 # ==================================================

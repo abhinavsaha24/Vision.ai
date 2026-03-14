@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createChart } from 'lightweight-charts';
-import { LineChart } from 'lucide-react';
+import { LineChart, ZoomIn, ZoomOut, MoveRight, MoveLeft } from 'lucide-react';
 import axios from 'axios';
 
 export default function TradingChart({ symbol, signalData }) {
@@ -88,6 +88,10 @@ export default function TradingChart({ symbol, signalData }) {
 
     fetchHistoricalData();
 
+    // Attach chart reference to the window for button controls
+    window.tvChart = chart;
+    window.tvSeries = candlestickSeries;
+
     // Resize observer to keep chart responsive
     const handleResize = () => {
       if (chartContainerRef.current) {
@@ -110,9 +114,14 @@ export default function TradingChart({ symbol, signalData }) {
           <LineChart className="w-4 h-4" />
           <span>Advanced Chart</span>
         </h2>
-        <div className="flex space-x-2">
-            <span className="text-xs bg-dark-bg px-2 py-1 rounded border border-dark-border text-dark-muted font-mono">{symbol}</span>
-            <span className="text-xs bg-dark-bg px-2 py-1 rounded border border-dark-border text-dark-muted font-mono">1H</span>
+        <div className="flex space-x-2 items-center">
+            {/* Chart Controls */}
+            <div className="flex items-center space-x-1 bg-slate-800 rounded p-1 mr-2">
+               <button onClick={() => window.tvChart?.timeScale().scrollToRealTime()} className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors"><MoveRight className="w-3 h-3" /></button>
+               <button onClick={() => window.tvChart?.timeScale().scrollToPosition(-10, true)} className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors"><MoveLeft className="w-3 h-3" /></button>
+            </div>
+            <span className="text-xs bg-slate-800 px-2 py-1 rounded border border-slate-700 text-slate-300 font-mono">{symbol}</span>
+            <span className="text-xs bg-slate-800 px-2 py-1 rounded border border-slate-700 text-slate-300 font-mono">1H</span>
         </div>
       </div>
       

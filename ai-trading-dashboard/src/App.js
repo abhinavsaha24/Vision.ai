@@ -86,7 +86,7 @@ export default function App() {
       mounted = false;
       clearInterval(interval);
     };
-  }, [get, market]);
+  }, [get, post, market]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRefreshPaper = async () => {
     try {
@@ -100,34 +100,40 @@ export default function App() {
       
       <Header apiHealth={health} market={market} setMarket={setMarket} />
 
-      <main className="flex-1 p-[20px] grid gap-[20px] items-start xl:grid-cols-[1.1fr_2fr_1.1fr]" style={{ gridTemplateRows: 'auto auto auto' }}>
+      <main className="flex-1 w-full max-w-[1920px] mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
         
-        {/* LEFT COLUMN */}
-        <div className="flex flex-col gap-[20px]">
+        {/* SIDEBAR (Left - 3 columns on large screens) */}
+        <div className="lg:col-span-3 flex flex-col gap-4">
           <LivePricePanel symbol={market} />
-          <PortfolioAnalytics portfolioData={portfolio} loading={loading['get-/portfolio/performance']} />
           <StrategyTable strategiesData={strategies} loading={loading['get-/strategies/list']} />
+          <PortfolioAnalytics portfolioData={portfolio} loading={loading['get-/portfolio/performance']} />
         </div>
 
-        {/* CENTER COLUMN */}
-        <div className="flex flex-col gap-[20px]">
+        {/* MAIN CHART CENTER (6 columns on large screens) */}
+        <div className="lg:col-span-6 flex flex-col gap-4 h-full">
           <AiSignalPanel signalData={prediction} loading={loading['post-/model/predict']} />
           <TradingChart symbol={market} signalData={prediction} />
         </div>
 
-        {/* RIGHT COLUMN */}
-        <div className="flex flex-col gap-[20px]">
+        {/* INFO PANELS RIGHT (3 columns on large screens) */}
+        <div className="lg:col-span-3 flex flex-col gap-4">
           <RegimePanel regimeData={regime} loading={loading[`get-/regime/current?symbol=${encodeURIComponent(market)}`]} />
           <RiskDashboard riskData={risk} loading={loading[`get-/risk/status?symbol=${encodeURIComponent(market)}`]} />
           <NewsPanel newsData={news} loading={loading['get-/news']} />
         </div>
 
-        {/* BOTTOM ROW (Full Width, split in two on desktop) */}
-        <div className="col-span-1 xl:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-[20px]">
-          <PaperTradingPanel statusData={paperStatus} loading={loading['get-/paper-trading/status']} onRefresh={handleRefreshPaper} />
-          <OrderHistory historyData={orders} loading={loading['get-/orders/history']} />
+        {/* BOTTOM ROW: PAPER TRADING & EXECUTION FEED */}
+        <div className="lg:col-span-12 grid grid-cols-1 lg:grid-cols-12 gap-4 mt-2 mb-4">
+           {/* Paper trading takes up 2/3 of space at bottom */}
+           <div className="lg:col-span-8">
+             <PaperTradingPanel statusData={paperStatus} loading={loading['get-/paper-trading/status']} onRefresh={handleRefreshPaper} />
+           </div>
+           
+           {/* Execution feed takes up 1/3 of space at bottom right */}
+           <div className="lg:col-span-4 max-h-[400px]">
+             <OrderHistory historyData={orders} loading={loading['get-/orders/history']} />
+           </div>
         </div>
-
       </main>
       
       <Footer />
