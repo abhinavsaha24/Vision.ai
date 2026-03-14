@@ -22,8 +22,9 @@ WORKDIR /app
 # Copy installed packages
 COPY --from=builder /install /usr/local
 
-# Copy application code (new structure)
+# Copy application code
 COPY backend/ backend/
+COPY config/ config/
 COPY models/ models/
 COPY data/ data/
 COPY .env .env
@@ -43,6 +44,7 @@ EXPOSE 10000
 ENV LOG_LEVEL=INFO
 ENV LOG_FORMAT=json
 ENV PORT=10000
+ENV REDIS_ENABLED=false
 
 # Start the API server
 CMD ["python", "-m", "backend.src.api.main"]

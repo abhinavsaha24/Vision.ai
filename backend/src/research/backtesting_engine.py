@@ -313,3 +313,96 @@ class BacktestEngine:
             "p5_max_dd": round(float(np.percentile(max_drawdowns, 5)), 4),
             "n_simulations": n_simulations,
         }
+
+    # --------------------------------------------------
+    # Walk-Forward Validation
+    # --------------------------------------------------
+
+    def walk_forward_validation(self, df: pd.DataFrame, signals: np.ndarray,
+                                 n_splits: int = 5, train_ratio: float = 0.7,
+                                 price_col: str = "close") -> dict:
+        """
+        Walk-forward out-of-sample validation.
+
+        Splits data into rolling train/test windows. Runs backtest on each
+        test window. Aggregates out-of-sample metrics.
+
+        Args:
+            df: full DataFrame with OHLCV data
+            signals: signal array covering entire df
+            n_splits: number of walk-forward windows
+            train_ratio: fraction of each window used for training
+            price_col: price column name
+
+        Returns:
+            Aggregated out-of-sample metrics across all windows.
+        """
+        n = len(df)
+        if n < 100:
+            return {"error": "Not enough data for walk-forward validation"}
+
+        signals = np.asarray(signals).ravel()
+        if len(signals) != n:
+            signals = np.pad(signals, (0, max(0, n - len(signals))))[:n]
+
+        window_size = n // n_splits
+        if window_size < 20:
+            return {"error": "Window size too small"}
+
+        results = []
+
+        for i in range(n_splits):
+            start = i * window_size
+            end = min(start + window_size, n)
+
+            if end - start < 20:
+                continue
+
+            train_end = start + int((end - start) * train_ratio)
+            test_start = train_end
+            test_end = end
+
+            if test_end - test_start < 5:
+                continue
+
+            # Run backtest on test (out-of-sample) portion only
+            test_df = df.iloc[test_start:test_end].copy()
+            test_signals = signals[test_start:test_end]
+
+            try:
+                result = self.run(test_df, test_signals, price_col)
+                results.append({
+                    "window": i + 1,
+                    "test_start": str(test_df.index[0])[:10],
+                    "test_end": str(test_df.index[-1])[:10],
+                    "total_return": result.total_return,
+                    "sharpe_ratio": result.sharpe_ratio,
+                    "sortino_ratio": result.sortino_ratio,
+                    "max_drawdown": result.max_drawdown,
+                    "win_rate": result.win_rate,
+                    "num_trades": result.num_trades,
+                })
+            except Exception as e:
+                results.append({
+                    "window": i + 1,
+                    "error": str(e),
+                })
+
+        if not results:
+            return {"error": "No valid windows produced results"}
+
+        # Aggregate out-of-sample metrics
+        valid = [r for r in results if "error" not in r]
+        if not valid:
+            return {"windows": results, "error": "All windows failed"}
+
+        return {
+            "n_windows": len(valid),
+            "avg_return": round(float(np.mean([r["total_return"] for r in valid])), 4),
+            "avg_sharpe": round(float(np.mean([r["sharpe_ratio"] for r in valid])), 4),
+            "avg_sortino": round(float(np.mean([r["sortino_ratio"] for r in valid])), 4),
+            "avg_max_drawdown": round(float(np.mean([r["max_drawdown"] for r in valid])), 4),
+            "avg_win_rate": round(float(np.mean([r["win_rate"] for r in valid])), 4),
+            "total_trades": sum(r["num_trades"] for r in valid),
+            "windows": results,
+        }

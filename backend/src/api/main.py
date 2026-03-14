@@ -38,6 +38,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import pandas as pd
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -70,9 +72,13 @@ from backend.src.core.health_monitor import HealthMonitor
 from backend.src.core.structured_logger import setup_logging, set_correlation_id
 
 from backend.src.api.auth_routes import router as auth_router
+from backend.src.api.admin_routes import router as admin_router
 from backend.src.api.news_service import NewsAggregator
+from backend.src.core.rate_limiter import RateLimiterMiddleware
+from backend.src.database.db import init_db
 
 from backend.src.core.config import settings
+from backend.src.core.monitoring import MonitoringService
 
 
 # --------------------------------------------------
@@ -107,6 +113,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         return response
 
 app.add_middleware(RequestIDMiddleware)
+app.add_middleware(RateLimiterMiddleware, max_requests=60, window_seconds=60)
 
 # --------------------------------------------------
 # CORS Configuration
@@ -114,9 +121,9 @@ app.add_middleware(RequestIDMiddleware)
 
 origins = [
     "http://localhost:3000",
+    "http://localhost:5173",
     "https://visiontrading.vercel.app",
     "https://visiontrading-a3fdz3sdy-abhinavsaha24s-projects.vercel.app",
-    "*"
 ]
 
 app.add_middleware(
@@ -125,6 +132,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Request-ID"],
 )
 
 # --------------------------------------------------
@@ -151,6 +159,17 @@ async def options_handler(rest_of_path: str):
 # --------------------------------------------------
 
 app.include_router(auth_router, prefix="/auth")
+app.include_router(admin_router, prefix="/admin")
+
+# --------------------------------------------------
+# Database Init
+# --------------------------------------------------
+
+try:
+    init_db()
+    logger.info("Database initialized")
+except Exception as e:
+    logger.warning(f"Database init warning: {e}")
 
 # --------------------------------------------------
 # Services (Singletons)
@@ -170,10 +189,22 @@ regime_detector = MarketRegimeDetector()
 strategy_selector = StrategySelector()
 strategy_engine = StrategyEngine()
 
-sentiment_engine = SentimentEngine()
+# Lazy-init sentiment engine (FinBERT is heavy — defer to first call)
+sentiment_engine = None
+def _get_sentiment_engine():
+    global sentiment_engine
+    if sentiment_engine is None:
+        try:
+            sentiment_engine = SentimentEngine()
+        except Exception as e:
+            logger.warning(f"SentimentEngine init failed: {e}")
+            return None
+    return sentiment_engine
+
 portfolio_manager = PortfolioManager(initial_cash=100000)
 news_aggregator = NewsAggregator()
 health_monitor = HealthMonitor()
+monitoring = MonitoringService()
 
 # Paper trading instance
 paper_trader = None
@@ -383,8 +414,9 @@ async def predict(request: PredictRequest):
             df, preds[0] if preds else {"probability": 0.5}, regime
         )
 
-        # Sentiment
-        sentiment = sentiment_engine.get_sentiment()
+        # Sentiment (lazy-loaded)
+        _se = _get_sentiment_engine()
+        sentiment = _se.get_sentiment() if _se else {"score": 0.0, "label": "neutral"}
         sentiment_score = sentiment.get("score", 0)
 
         # Signal Fusion
@@ -503,10 +535,13 @@ async def get_regime(symbol: str = "BTC/USDT"):
 @app.get("/sentiment/current")
 async def get_sentiment():
     try:
-        return sentiment_engine.get_sentiment()
+        _se = _get_sentiment_engine()
+        if _se:
+            return _se.get_sentiment()
+        return {"score": 0.0, "label": "neutral", "message": "Sentiment engine loading"}
     except Exception as e:
         logger.error(f"Sentiment analysis error: {e}", exc_info=True)
-        return {"score": 0.5, "label": "neutral"}
+        return {"score": 0.0, "label": "neutral"}
 
 
 # ==================================================
@@ -537,19 +572,16 @@ async def risk_status(symbol: str = "BTC/USDT"):
 
 @app.get("/strategies/list")
 async def list_strategies():
-    return {
-        "strategies": [
-            {"name": "AI Prediction", "type": "ml", "weight": 0.30},
-            {"name": "Momentum", "type": "trend", "weight": 0.15},
-            {"name": "Mean Reversion (RSI)", "type": "reversion", "weight": 0.15},
-            {"name": "Breakout", "type": "trend", "weight": 0.10},
-            {"name": "MA Crossover", "type": "trend", "weight": 0.05},
-            {"name": "Volatility Breakout", "type": "volatility", "weight": 0.05},
-            {"name": "Volatility Compression", "type": "volatility", "weight": 0.05},
-            {"name": "Volume Spike", "type": "flow", "weight": 0.05},
-            {"name": "Order Book Imbalance", "type": "flow", "weight": 0.10},
-        ],
-    }
+    # Dynamically build from strategy engine registry
+    strategy_list = []
+    for name, instance in strategy_engine.strategies.items():
+        strategy_list.append({
+            "name": name.replace("_", " ").title(),
+            "key": name,
+            "active": instance is not None,
+            "weight": strategy_engine._get_default_weight(name) if hasattr(strategy_engine, '_get_default_weight') else 0,
+        })
+    return {"strategies": strategy_list, "total": len(strategy_list)}
 
 
 # ==================================================
@@ -726,6 +758,20 @@ async def feature_importance():
     if not trainer.metadata.feature_importances:
         raise HTTPException(404, "No trained model — train first")
     return {"importance": trainer.get_feature_importance(top_n=20)}
+
+
+# ==================================================
+# MONITORING
+# ==================================================
+
+@app.get("/monitoring/metrics")
+async def get_monitoring_metrics():
+    """System metrics: latency, error rates, strategy performance, risk alerts."""
+    try:
+        return monitoring.get_metrics()
+    except Exception as e:
+        logger.error(f"Monitoring metrics error: {e}")
+        return {"status": "error", "message": str(e)}
 
 
 # ==================================================

@@ -55,6 +55,18 @@ except ImportError:
     OrderBookImbalanceStrategy = None
     logger.warning("OrderFlow strategies not available")
 
+try:
+    from backend.src.strategy.sentiment_strategy import SentimentStrategy
+except ImportError:
+    SentimentStrategy = None
+    logger.warning("SentimentStrategy not available")
+
+try:
+    from backend.src.strategy.risk_parity_strategy import RiskParityStrategy
+except ImportError:
+    RiskParityStrategy = None
+    logger.warning("RiskParityStrategy not available")
+
 
 
 # ------------------------------------------------------------------
@@ -63,28 +75,32 @@ except ImportError:
 
 REGIME_WEIGHTS = {
     "uptrend": {
-        "ai": 0.30, "momentum": 0.25, "mean_reversion": 0.05,
-        "breakout": 0.15, "ma_crossover": 0.10,
+        "ai": 0.25, "momentum": 0.20, "mean_reversion": 0.05,
+        "breakout": 0.12, "ma_crossover": 0.08,
         "vol_breakout": 0.05, "vol_compression": 0.00,
         "volume_spike": 0.05, "ob_imbalance": 0.05,
+        "sentiment": 0.10, "risk_parity": 0.05,
     },
     "downtrend": {
-        "ai": 0.30, "momentum": 0.20, "mean_reversion": 0.10,
-        "breakout": 0.10, "ma_crossover": 0.10,
-        "vol_breakout": 0.10, "vol_compression": 0.00,
+        "ai": 0.25, "momentum": 0.18, "mean_reversion": 0.08,
+        "breakout": 0.08, "ma_crossover": 0.08,
+        "vol_breakout": 0.08, "vol_compression": 0.00,
         "volume_spike": 0.05, "ob_imbalance": 0.05,
+        "sentiment": 0.08, "risk_parity": 0.07,
     },
     "sideways": {
-        "ai": 0.25, "momentum": 0.05, "mean_reversion": 0.25,
+        "ai": 0.20, "momentum": 0.05, "mean_reversion": 0.20,
         "breakout": 0.05, "ma_crossover": 0.05,
-        "vol_breakout": 0.05, "vol_compression": 0.15,
-        "volume_spike": 0.05, "ob_imbalance": 0.10,
+        "vol_breakout": 0.05, "vol_compression": 0.12,
+        "volume_spike": 0.05, "ob_imbalance": 0.08,
+        "sentiment": 0.08, "risk_parity": 0.07,
     },
     "default": {
-        "ai": 0.30, "momentum": 0.15, "mean_reversion": 0.15,
-        "breakout": 0.10, "ma_crossover": 0.05,
+        "ai": 0.25, "momentum": 0.12, "mean_reversion": 0.12,
+        "breakout": 0.08, "ma_crossover": 0.05,
         "vol_breakout": 0.05, "vol_compression": 0.05,
-        "volume_spike": 0.05, "ob_imbalance": 0.10,
+        "volume_spike": 0.05, "ob_imbalance": 0.08,
+        "sentiment": 0.08, "risk_parity": 0.07,
     },
 }
 
@@ -118,6 +134,12 @@ class StrategyEngine:
         # Order flow
         self.volume_spike = self._register("volume_spike", VolumeSpikeStrategy, volume_threshold=2.0)
         self.ob_imbalance = self._register("ob_imbalance", OrderBookImbalanceStrategy, imbalance_threshold=0.7)
+
+        # Sentiment
+        self.sentiment = self._register("sentiment", SentimentStrategy)
+
+        # Risk parity
+        self.risk_parity = self._register("risk_parity", RiskParityStrategy)
 
         # AI confidence threshold
         self.ai_threshold = 0.55
@@ -227,6 +249,8 @@ class StrategyEngine:
             "vol_compression": self._safe_signal(self.vol_compression, df),
             "volume_spike": self._safe_signal(self.volume_spike, df),
             "ob_imbalance": self._safe_signal(self.ob_imbalance, df),
+            "sentiment": self._safe_signal(self.sentiment),
+            "risk_parity": self._safe_signal(self.risk_parity, df),
         }
 
         score = sum(signals[k] * weights.get(k, 0) for k in signals)

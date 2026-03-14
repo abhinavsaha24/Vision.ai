@@ -31,7 +31,7 @@ except ImportError:
 # ==================================================================
 
 class FinBERTSentimentModel:
-    """Financial sentiment analysis using FinBERT."""
+    """Financial sentiment analysis using FinBERT (lazy-loaded)."""
 
     MODEL_NAME = "ProsusAI/finbert"
 
@@ -39,17 +39,33 @@ class FinBERTSentimentModel:
         if not _HAS_TRANSFORMERS:
             raise ImportError("transformers and torch required for FinBERT")
 
-        logger.info("Loading FinBERT model...")
-        self.tokenizer = AutoTokenizer.from_pretrained(self.MODEL_NAME)
-        self.model = AutoModelForSequenceClassification.from_pretrained(self.MODEL_NAME)
-        self.model.eval()
-
+        # Lazy load — don't download 400MB model at startup
+        self.tokenizer = None
+        self.model = None
+        self._loaded = False
         self.labels = ["positive", "negative", "neutral"]
+
+    def _ensure_loaded(self):
+        """Load FinBERT model on first use."""
+        if self._loaded:
+            return
+        try:
+            logger.info("Loading FinBERT model (first use)...")
+            self.tokenizer = AutoTokenizer.from_pretrained(self.MODEL_NAME)
+            self.model = AutoModelForSequenceClassification.from_pretrained(self.MODEL_NAME)
+            self.model.eval()
+            self._loaded = True
+            logger.info("FinBERT model loaded successfully")
+        except Exception as e:
+            logger.error(f"FinBERT load failed: {e}")
+            raise
 
     def analyze(self, texts: List[str]) -> Dict:
         """Analyze sentiment for a batch of texts."""
         if not texts:
             return {"score": 0.0, "label": "neutral", "details": []}
+
+        self._ensure_loaded()
 
         details = []
         scores = []

@@ -27,11 +27,12 @@ class QuantSignalEngine:
     def __init__(self):
         # Base weights for signal sources
         self.weights = {
-            "ai": 0.35,
-            "strategy": 0.30,
+            "ai": 0.30,
+            "strategy": 0.25,
             "momentum": 0.15,
             "mean_reversion": 0.10,
             "sentiment": 0.10,
+            "risk_parity": 0.10,
         }
 
         # Performance tracking for adaptive weights
@@ -121,6 +122,7 @@ class QuantSignalEngine:
         if volatility == "high_volatility":
             weights["sentiment"] *= 0.5
             weights["strategy"] *= 0.8
+            weights["risk_parity"] = weights.get("risk_parity", 0.1) * 1.5
         else:
             weights["sentiment"] *= 1.2
 
@@ -177,6 +179,13 @@ class QuantSignalEngine:
             direction = "SELL"
         else:
             direction = "HOLD"
+
+        # Regime gating: block new entries during crisis
+        if regime and direction in ("BUY", "SELL"):
+            label = regime.get("label", "")
+            if label == "crisis":
+                direction = "HOLD"
+                confidence *= 0.3  # heavily reduce confidence
 
         # Track for adaptive weighting
         self._signal_history.append({

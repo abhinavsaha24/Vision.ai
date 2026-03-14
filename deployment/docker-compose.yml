@@ -1,7 +1,4 @@
-# docker-compose for Vision AI trading platform
-# Services: API backend, Redis cache, PostgreSQL trade DB
-
-version: "3.9"
+version: "3.8"
 
 services:
   api:
@@ -9,51 +6,26 @@ services:
       context: ..
       dockerfile: deployment/Dockerfile
     ports:
-      - "${PORT:-10000}:10000"
+      - "10000:10000"
     env_file:
       - ../.env
     environment:
-      - LOG_LEVEL=INFO
-      - LOG_FORMAT=json
+      - PORT=10000
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_ENABLED=true
+      - REDIS_TTL=30
     depends_on:
-      redis:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
+      - redis
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:10000/health')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_USER: vision_ai
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-      POSTGRES_DB: vision_ai_trades
-    ports:
-      - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - redis_data:/data
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U vision_ai"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
 
 volumes:
-  pgdata:
+  redis_data:

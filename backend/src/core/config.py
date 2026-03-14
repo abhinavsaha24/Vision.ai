@@ -71,6 +71,13 @@ class Settings(BaseSettings):
     dashboard_port: int = 8501
 
     # --------------------------------------------------
+    # Redis Cache
+    # --------------------------------------------------
+    redis_url: str = "redis://localhost:6379/0"
+    redis_ttl: int = 30
+    redis_enabled: bool = False
+
+    # --------------------------------------------------
     # Risk
     # --------------------------------------------------
     max_position_size: float = 0.05

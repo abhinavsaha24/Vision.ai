@@ -96,3 +96,9 @@ statsmodels>=0.14
 
 # Optimization
 scipy>=1.10
+
+# Redis Cache (optional — graceful fallback when unavailable)
+redis>=5.0
+
+# System Monitoring
+psutil>=5.9
