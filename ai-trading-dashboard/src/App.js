@@ -14,10 +14,12 @@ import NewsPanel from './components/NewsPanel';
 import OrderHistory from './components/OrderHistory';
 import TradingChart from './components/TradingChart';
 import Footer from './components/Footer';
+import AdvancedAnalyticsModal from './components/AdvancedAnalyticsModal';
 
 export default function App() {
   const { get, post, loading } = useApi();
   const [market, setMarket] = useState('BTC/USDT');
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
 
   // Application State
   const [health, setHealth] = useState(null);
@@ -98,7 +100,17 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#0b1220] text-[#F8FAFC] flex flex-col pt-2 pb-6 selection:bg-trade-green/30">
       
-      <Header apiHealth={health} market={market} setMarket={setMarket} />
+      <Header 
+        apiHealth={health} 
+        market={market} 
+        setMarket={setMarket} 
+        onOpenAnalytics={() => setIsAnalyticsOpen(true)} 
+      />
+
+      <AdvancedAnalyticsModal 
+        isOpen={isAnalyticsOpen} 
+        onClose={() => setIsAnalyticsOpen(false)} 
+      />
 
       <main className="flex-1 w-full max-w-[1920px] mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
         

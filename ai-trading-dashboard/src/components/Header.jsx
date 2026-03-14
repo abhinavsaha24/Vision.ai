@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Server, ShieldPlus, ChevronDown } from 'lucide-react';
+import { Clock, Server, ShieldPlus, ChevronDown, Activity } from 'lucide-react';
 
-export default function Header({ apiHealth, market, setMarket }) {
+export default function Header({ apiHealth, market, setMarket, onOpenAnalytics }) {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -54,8 +54,18 @@ export default function Header({ apiHealth, market, setMarket }) {
         </div>
       </div>
 
-      {/* Clock & Status */}
-      <div className="flex items-center space-x-6 font-mono text-sm">
+      {/* Clock & Status & Settings */}
+      <div className="flex items-center space-x-4 font-mono text-sm">
+        
+        <button 
+          onClick={onOpenAnalytics}
+          className="flex items-center space-x-2 bg-dark-bg hover:bg-slate-800 text-slate-300 hover:text-white px-3 py-1.5 rounded-lg border border-dark-border transition-colors group"
+          title="Advanced Analytics & Diagnostics"
+        >
+          <Activity className="w-4 h-4 text-trade-green group-hover:scale-110 transition-transform" />
+          <span className="hidden sm:inline">Diagnostics</span>
+        </button>
+
         <div className="flex items-center space-x-2 text-dark-muted bg-dark-bg px-3 py-1.5 rounded-lg border border-dark-border">
           <Clock className="w-4 h-4" />
           <span>{formatTime(time)}</span>
