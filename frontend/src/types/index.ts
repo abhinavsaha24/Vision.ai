@@ -25,7 +25,7 @@ export interface PredictionResponse {
 }
 
 export interface PortfolioStatus {
-  total_equity: number;
+  current_equity: number;
   cash: number;
   positions_value: number;
   unrealized_pnl: number;

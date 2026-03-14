@@ -35,7 +35,7 @@ export default function DashboardPage() {
   }, [symbol, fetchPrediction, fetchPortfolioStatus]);
 
   const pnlPercent = portfolioStatus 
-    ? (portfolioStatus.total_equity - 100000) / 100000 * 100 // assuming 100k initial from backend
+    ? (portfolioStatus.current_equity - 100000) / 100000 * 100 // assuming 100k initial from backend
     : 0;
 
   return (
@@ -72,7 +72,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white">
-              ${portfolioStatus?.total_equity?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+              ${portfolioStatus?.current_equity?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
             </div>
             <div className="flex items-center gap-2 mt-1">
               <span className={`text-xs font-medium ${pnlPercent >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>

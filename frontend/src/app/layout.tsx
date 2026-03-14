@@ -3,6 +3,7 @@ import { Inter, Roboto_Mono } from "next/font/google";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { MarketInitializer } from "@/components/layout/MarketInitializer";
 import "./globals.css";
 
 const inter = Inter({ 
@@ -30,6 +31,7 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${robotoMono.variable} font-sans antialiased bg-slate-950 text-slate-50`}
       >
+        <MarketInitializer />
         <div className="flex h-screen overflow-hidden">
           <Sidebar />
           <div className="flex flex-1 flex-col min-w-0">

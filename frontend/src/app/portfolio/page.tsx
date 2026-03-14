@@ -9,7 +9,7 @@ import { OrderHistoryTable } from "@/components/portfolio/OrderHistoryTable";
 export default function PortfolioPage() {
   const { portfolioStatus } = useSignalStore();
 
-  const total = portfolioStatus?.total_equity || 0;
+  const total = portfolioStatus?.current_equity || 0;
   const positionsValue = portfolioStatus?.positions_value || 0;
   const cash = portfolioStatus?.cash || 0;
   const pnl = portfolioStatus?.unrealized_pnl || 0;
