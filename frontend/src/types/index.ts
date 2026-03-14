@@ -12,7 +12,7 @@ export interface PredictionResult {
   direction: string;
   probability: number;
   confidence: number;
-  regime: string;
+  regime: any;
 }
 
 export interface PredictionResponse {
@@ -20,7 +20,7 @@ export interface PredictionResponse {
   signal: string;
   confidence: number;
   probability: number;
-  regime: string;
+  regime: any;
   risk_level: string;
 }
 

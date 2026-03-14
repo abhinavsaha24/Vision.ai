@@ -44,7 +44,7 @@ export default function PredictionsPage() {
 
                   <div className="flex flex-col w-32 items-end">
                     <span className="text-xs text-slate-500 uppercase font-semibold tracking-wider">Regime</span>
-                    <span className="text-sm font-medium text-slate-300 capitalize">{typeof prediction.regime === 'object' ? prediction.regime?.label : prediction.regime}</span>
+                    <span className="text-sm font-medium text-slate-300 capitalize">{typeof prediction.regime === 'object' ? (prediction.regime as any)?.label : prediction.regime}</span>
                   </div>
                 </div>
               </div>
