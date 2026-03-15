@@ -6,8 +6,6 @@ import { useMarketStore } from "@/store/marketStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BrainCircuit, ActivitySquare, AlertCircle } from "lucide-react";
-import { StrategyTable } from "@/components/dashboard/StrategyTable";
-import { NewsFeed } from "@/components/dashboard/NewsFeed";
 
 export default function SignalsPage() {
   const { symbol } = useMarketStore();
@@ -70,8 +68,8 @@ export default function SignalsPage() {
         </Card>
 
         {/* Signal Components */}
-        <div className="lg:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="flex-1 h-full">
+        <div className="lg:col-span-3">
+          <Card className="h-full bg-slate-900 border-slate-800">
             <CardHeader>
               <CardTitle>AI Market Intelligence</CardTitle>
             </CardHeader>
@@ -94,14 +92,6 @@ export default function SignalsPage() {
               </div>
             </CardContent>
           </Card>
-
-          <div className="flex-1 h-full">
-            <StrategyTable />
-          </div>
-
-          <div className="col-span-1 lg:col-span-2 h-[300px]">
-            <NewsFeed />
-          </div>
         </div>
       </div>
     </div>

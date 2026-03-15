@@ -8,7 +8,9 @@ import {
   ActivitySquare, 
   BrainCircuit, 
   Wallet,
-  Settings
+  Settings,
+  Newspaper,
+  Network
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 
@@ -17,7 +19,9 @@ const navigation = [
   { name: "Charts", href: "/charts", icon: LineChart },
   { name: "Signals", href: "/signals", icon: ActivitySquare },
   { name: "Predictions", href: "/predictions", icon: BrainCircuit },
+  { name: "Strategies", href: "/strategies", icon: Network },
   { name: "Portfolio", href: "/portfolio", icon: Wallet },
+  { name: "News", href: "/news", icon: Newspaper },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

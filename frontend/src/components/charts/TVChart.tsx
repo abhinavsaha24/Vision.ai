@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import { createChart, IChartApi, ISeriesApi, ColorType, CandlestickSeries, HistogramSeries } from "lightweight-charts";
 import { useMarketStore } from "@/store/marketStore";
+import { useSignalStore } from "@/store/signalStore";
 
 export function TVChart() {
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -11,6 +12,7 @@ export function TVChart() {
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
 
   const { liveKline, historicalData } = useMarketStore();
+  const { prediction } = useSignalStore();
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -93,6 +95,26 @@ export function TVChart() {
       } as any);
     }
   }, [liveKline]);
+
+  // Handle Signal Markers
+  useEffect(() => {
+    if (candlestickSeriesRef.current && prediction) {
+      const latestTime = liveKline?.time || (historicalData.length > 0 ? historicalData[historicalData.length - 1].time : null);
+      if (latestTime && (prediction.signal === 'BUY' || prediction.signal === 'SELL')) {
+        (candlestickSeriesRef.current as any).setMarkers([
+          {
+            time: latestTime as any,
+            position: prediction.signal === 'BUY' ? 'belowBar' : 'aboveBar',
+            color: prediction.signal === 'BUY' ? '#10b981' : '#f43f5e',
+            shape: prediction.signal === 'BUY' ? 'arrowUp' : 'arrowDown',
+            text: prediction.signal,
+          }
+        ]);
+      } else {
+        (candlestickSeriesRef.current as any).setMarkers([]);
+      }
+    }
+  }, [prediction, liveKline, historicalData]);
 
   return (
     <div className="w-full h-full min-h-[400px] flex flex-col rounded-xl border border-slate-800 bg-slate-900/50 backdrop-blur-xl overflow-hidden shadow">

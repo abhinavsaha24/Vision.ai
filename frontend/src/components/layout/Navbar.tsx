@@ -7,7 +7,7 @@ import { Bell, Search, Activity } from "lucide-react";
 import { useEffect } from "react";
 
 export function Navbar() {
-  const { livePrice, symbol } = useMarketStore();
+  const { livePrice, symbol, setSymbol } = useMarketStore();
   const { riskStatus, fetchRiskStatus } = useSignalStore();
 
   useEffect(() => {
@@ -33,7 +33,17 @@ export function Navbar() {
 
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-3">
-          <span className="text-sm text-slate-400 font-medium">{symbol}</span>
+          <select 
+            value={symbol}
+            onChange={(e) => setSymbol(e.target.value)}
+            className="bg-slate-900 border border-slate-700 text-sm font-medium text-slate-200 rounded-md px-2 py-1 outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 cursor-pointer"
+          >
+            <option value="BTCUSDT">BTC/USDT</option>
+            <option value="ETHUSDT">ETH/USDT</option>
+            <option value="SOLUSDT">SOL/USDT</option>
+            <option value="BNBUSDT">BNB/USDT</option>
+            <option value="XRPUSDT">XRP/USDT</option>
+          </select>
           <span className="text-lg font-bold text-slate-100 font-mono tracking-tight">
             {livePrice ? `$${livePrice.toFixed(2)}` : 'Loading...'}
           </span>
