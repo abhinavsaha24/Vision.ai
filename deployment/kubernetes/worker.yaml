@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vision-ai-worker
+  namespace: vision-ai
+  labels:
+    app.kubernetes.io/name: vision-ai-worker
+    app.kubernetes.io/component: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vision-ai-worker
+  template:
+    metadata:
+      labels:
+        app: vision-ai-worker
+        app.kubernetes.io/name: vision-ai-worker
+        app.kubernetes.io/component: worker
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: worker
+          image: vision-ai-backend:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - -m
+            - backend.src.workers.trading_worker
+          envFrom:
+            - configMapRef:
+                name: vision-ai-config
+            - secretRef:
+                name: vision-ai-secrets
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "768Mi"
+            limits:
+              cpu: "2"
+              memory: "2Gi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: false
+          startupProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - import backend.src.workers.trading_worker
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 12
+          livenessProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - print('ok')
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3

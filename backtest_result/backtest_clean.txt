@@ -1,0 +1,169 @@
+============================================================
+VISION-AI: INSTITUTIONAL MULTI-SYMBOL BACKTEST ENGINE
+============================================================
+Fetching BTC/USDT (3000 bars, 1h)...
+Fetching ETH/USDT (3000 bars, 1h)...
+Fetching SOL/USDT (3000 bars, 1h)...
+
+Aligning data across assets to ensure no look-ahead bias...
+Aligned dataset: 975 concurrent 1h bars.
+Train set: 487 bars. Test set (Out-Of-Sample): 488 bars.
+Training AlphaModel for BTC/USDT...
+Training AlphaModel for ETH/USDT...
+Training AlphaModel for SOL/USDT...
+
+Initializing Strict Backtest Environment...
+Simulating...
+[SOL/USDT | 2026-02-26 21:00:00] ML SHORT | p=0.380 | conf=0.240 | regime=trending
+[BTC/USDT | 2026-02-26 23:00:00] ML SHORT | p=0.238 | conf=0.525 | regime=ranging
+[ETH/USDT | 2026-02-26 23:00:00] ML SHORT | p=0.173 | conf=0.654 | regime=trending
+[SOL/USDT stop_loss] SHORT entry=86.00 exit=87.79 qty=27.8562 | Gross: -49.90 | Fees: 1.94 | Net: -51.84 | Cash: 95468.74
+[ETH/USDT take_profit] SHORT entry=2026.04 exit=1982.49 qty=1.0860 | Gross: 47.30 | Fees: 1.74 | Net: 45.56 | Cash: 97714.64
+[BTC/USDT take_profit] SHORT entry=67453.03 exit=66132.44 qty=0.0338 | Gross: 44.62 | Fees: 1.81 | Net: 42.81 | Cash: 100036.53
+[SOL/USDT | 2026-02-27 11:00:00] ML SHORT | p=0.392 | conf=0.217 | regime=trending
+[ETH/USDT | 2026-02-27 13:00:00] ML SHORT | p=0.217 | conf=0.565 | regime=trending
+[SOL/USDT take_profit] SHORT entry=83.52 exit=81.28 qty=28.4728 | Gross: 63.65 | Fees: 1.88 | Net: 61.77 | Cash: 97758.45
+[BTC/USDT | 2026-02-27 23:00:00] ML LONG | p=0.891 | conf=0.781 | regime=trending
+[ETH/USDT take_profit] SHORT entry=1963.62 exit=1925.02 qty=1.1916 | Gross: 45.99 | Fees: 1.85 | Net: 44.14 | Cash: 97697.91
+[BTC/USDT stop_loss] LONG entry=65898.40 exit=63162.91 qty=0.0371 | Gross: -101.47 | Fees: 1.92 | Net: -103.39 | Cash: 100039.06
+[BTC/USDT | 2026-02-28 13:00:00] ML LONG | p=0.662 | conf=0.325 | regime=ranging
+[ETH/USDT | 2026-02-28 15:00:00] ML LONG | p=0.674 | conf=0.349 | regime=ranging
+[BTC/USDT take_profit] LONG entry=65170.56 exit=66928.26 qty=0.0366 | Gross: 64.39 | Fees: 1.94 | Net: 62.46 | Cash: 97839.82
+[ETH/USDT take_profit] LONG entry=1899.49 exit=1965.46 qty=1.1907 | Gross: 78.55 | Fees: 1.84 | Net: 76.71 | Cash: 100178.22
+[BTC/USDT | 2026-02-28 21:00:00] ML LONG | p=0.669 | conf=0.337 | regime=trending
+[ETH/USDT | 2026-03-01 08:00:00] ML SHORT | p=0.362 | conf=0.275 | regime=trending
+[SOL/USDT | 2026-03-01 08:00:00] ML SHORT | p=0.347 | conf=0.306 | regime=trending
+[BTC/USDT stop_loss] LONG entry=66743.68 exit=65364.20 qty=0.0375 | Gross: -51.78 | Fees: 1.98 | Net: -53.76 | Cash: 95472.08
+[ETH/USDT take_profit] SHORT entry=1986.37 exit=1916.56 qty=1.1691 | Gross: 81.61 | Fees: 1.83 | Net: 79.78 | Cash: 97874.17
+[SOL/USDT take_profit] SHORT entry=85.09 exit=82.10 qty=27.3835 | Gross: 82.00 | Fees: 1.83 | Net: 80.17 | Cash: 100284.42
+[SOL/USDT | 2026-03-01 23:00:00] ML SHORT | p=0.402 | conf=0.195 | regime=trending
+[ETH/USDT | 2026-03-02 06:00:00] ML SHORT | p=0.200 | conf=0.600 | regime=trending
+[BTC/USDT | 2026-03-02 07:00:00] ML SHORT | p=0.342 | conf=0.315 | regime=ranging
+[BTC/USDT stop_loss] SHORT entry=65965.47 exit=66990.49 qty=0.0336 | Gross: -34.45 | Fees: 1.79 | Net: -36.23 | Cash: 95624.30
+[SOL/USDT stop_loss] SHORT entry=83.56 exit=85.54 qty=27.9481 | Gross: -55.28 | Fees: 1.89 | Net: -57.17 | Cash: 97902.49
+[ETH/USDT stop_loss] SHORT entry=1943.32 exit=2046.31 qty=1.1776 | Gross: -121.28 | Fees: 1.88 | Net: -123.16 | Cash: 100067.86
+[SOL/USDT | 2026-03-02 16:00:00] ML LONG | p=0.730 | conf=0.461 | regime=trending
+[BTC/USDT | 2026-03-02 23:00:00] ML LONG | p=0.691 | conf=0.382 | regime=trending
+[ETH/USDT | 2026-03-02 23:00:00] ML SHORT | p=0.132 | conf=0.735 | regime=trending
+[SOL/USDT stop_loss] LONG entry=88.93 exit=86.71 qty=26.3168 | Gross: -58.40 | Fees: 1.85 | Net: -60.25 | Cash: 95404.83
+[BTC/USDT stop_loss] LONG entry=68823.12 exit=66962.59 qty=0.0345 | Gross: -64.19 | Fees: 1.87 | Net: -66.06 | Cash: 97713.22
+[ETH/USDT take_profit] SHORT entry=2027.19 exit=1953.19 qty=1.0992 | Gross: 81.35 | Fees: 1.75 | Net: 79.60 | Cash: 100021.14
+[BTC/USDT | 2026-03-03 15:00:00] ML LONG | p=0.669 | conf=0.338 | regime=ranging
+[ETH/USDT | 2026-03-03 15:00:00] ML LONG | p=0.765 | conf=0.530 | regime=trending
+[SOL/USDT | 2026-03-03 15:00:00] ML LONG | p=0.785 | conf=0.570 | regime=trending
+[BTC/USDT take_profit] LONG entry=67676.54 exit=69484.94 qty=0.0340 | Gross: 61.43 | Fees: 1.86 | Net: 59.57 | Cash: 95606.35
+[ETH/USDT take_profit] LONG entry=1970.02 exit=2063.44 qty=1.1402 | Gross: 106.52 | Fees: 1.84 | Net: 104.68 | Cash: 97957.25
+[SOL/USDT take_profit] LONG entry=84.89 exit=89.74 qty=26.2485 | Gross: 127.34 | Fees: 1.83 | Net: 125.51 | Cash: 100310.90
+[SOL/USDT | 2026-03-04 19:00:00] ML LONG | p=0.655 | conf=0.309 | regime=trending
+[BTC/USDT | 2026-03-04 20:00:00] ML LONG | p=0.634 | conf=0.269 | regime=trending
+[ETH/USDT | 2026-03-04 22:00:00] ML SHORT | p=0.168 | conf=0.664 | regime=trending
+[SOL/USDT stop_loss] LONG entry=93.20 exit=90.73 qty=26.1167 | Gross: -64.55 | Fees: 1.92 | Net: -66.47 | Cash: 95729.78
+[SOL/USDT | 2026-03-05 06:00:00] ML LONG | p=0.921 | conf=0.841 | regime=ranging
+[BTC/USDT stop_loss] LONG entry=73069.01 exit=72026.85 qty=0.0309 | Gross: -32.20 | Fees: 1.79 | Net: -33.99 | Cash: 95673.04
+[BTC/USDT | 2026-03-05 09:00:00] ML LONG | p=0.707 | conf=0.414 | regime=ranging
+[BTC/USDT breakeven_stop] LONG entry=72610.20 exit=71496.51 qty=0.0309 | Gross: -34.39 | Fees: 1.78 | Net: -36.17 | Cash: 95636.87
+[SOL/USDT breakeven_stop] LONG entry=90.93 exit=88.99 qty=25.0752 | Gross: -48.77 | Fees: 1.80 | Net: -50.58 | Cash: 97866.50
+[ETH/USDT take_profit] SHORT entry=2131.59 exit=2061.22 qty=1.0589 | Gross: 74.52 | Fees: 1.78 | Net: 72.75 | Cash: 100196.43
+[ETH/USDT | 2026-03-05 18:00:00] ML SHORT | p=0.286 | conf=0.428 | regime=trending
+[BTC/USDT | 2026-03-06 01:00:00] ML LONG | p=0.583 | conf=0.165 | regime=trending
+[SOL/USDT | 2026-03-06 01:00:00] ML LONG | p=0.834 | conf=0.668 | regime=trending
+[SOL/USDT stop_loss] LONG entry=89.15 exit=87.95 qty=25.6041 | Gross: -30.79 | Fees: 1.81 | Net: -32.61 | Cash: 95573.25
+[BTC/USDT stop_loss] LONG entry=71282.29 exit=70193.05 qty=0.0316 | Gross: -34.43 | Fees: 1.79 | Net: -36.22 | Cash: 97790.19
+[ETH/USDT take_profit] SHORT entry=2075.86 exit=2019.75 qty=1.1260 | Gross: 63.18 | Fees: 1.84 | Net: 61.34 | Cash: 100188.94
+[SOL/USDT | 2026-03-06 13:00:00] ML SHORT | p=0.304 | conf=0.392 | regime=trending
+[ETH/USDT | 2026-03-07 03:00:00] ML SHORT | p=0.236 | conf=0.529 | regime=trending
+[SOL/USDT take_profit] SHORT entry=85.55 exit=84.01 qty=29.2710 | Gross: 44.99 | Fees: 1.99 | Net: 43.00 | Cash: 97962.55
+[SOL/USDT | 2026-03-07 08:00:00] ML LONG | p=0.861 | conf=0.722 | regime=ranging
+[BTC/USDT | 2026-03-07 09:00:00] ML LONG | p=0.823 | conf=0.646 | regime=ranging
+[SOL/USDT stop_loss] LONG entry=84.57 exit=83.54 qty=28.9659 | Gross: -29.90 | Fees: 1.95 | Net: -31.85 | Cash: 95727.99
+[BTC/USDT stop_loss] LONG entry=68032.17 exit=67085.47 qty=0.0324 | Gross: -30.65 | Fees: 1.75 | Net: -32.40 | Cash: 97898.30
+[SOL/USDT | 2026-03-07 23:00:00] ML SHORT | p=0.397 | conf=0.206 | regime=trending
+[ETH/USDT take_profit] SHORT entry=1983.31 exit=1942.79 qty=1.1442 | Gross: 46.36 | Fees: 1.80 | Net: 44.56 | Cash: 97906.92
+[BTC/USDT | 2026-03-08 05:00:00] ML LONG | p=0.890 | conf=0.780 | regime=ranging
+[ETH/USDT | 2026-03-08 11:00:00] ML SHORT | p=0.271 | conf=0.457 | regime=trending
+[SOL/USDT take_profit] SHORT entry=83.16 exit=81.56 qty=27.7226 | Gross: 44.14 | Fees: 1.83 | Net: 42.32 | Cash: 95790.82
+[SOL/USDT | 2026-03-08 20:00:00] ML LONG | p=0.667 | conf=0.333 | regime=ranging
+[BTC/USDT breakeven_stop] LONG entry=67182.44 exit=66169.63 qty=0.0336 | Gross: -34.07 | Fees: 1.79 | Net: -35.86 | Cash: 95666.35
+[ETH/USDT breakeven_stop] SHORT entry=1950.30 exit=2010.67 qty=1.1300 | Gross: -68.22 | Fees: 1.79 | Net: -70.01 | Cash: 97800.16
+[SOL/USDT take_profit] LONG entry=82.32 exit=85.27 qty=28.5283 | Gross: 84.15 | Fees: 1.91 | Net: 82.24 | Cash: 100230.94
+[ETH/USDT | 2026-03-09 18:00:00] ML SHORT | p=0.239 | conf=0.522 | regime=trending
+[BTC/USDT | 2026-03-09 22:00:00] ML SHORT | p=0.379 | conf=0.241 | regime=trending
+[SOL/USDT | 2026-03-09 23:00:00] ML SHORT | p=0.232 | conf=0.536 | regime=ranging
+[BTC/USDT stop_loss] SHORT entry=68617.94 exit=70287.36 qty=0.0336 | Gross: -56.09 | Fees: 1.87 | Net: -57.96 | Cash: 95541.64
+[SOL/USDT stop_loss] SHORT entry=84.98 exit=86.76 qty=27.3150 | Gross: -48.83 | Fees: 1.88 | Net: -50.70 | Cash: 97812.09
+[SOL/USDT | 2026-03-10 03:00:00] ML SHORT | p=0.082 | conf=0.835 | regime=ranging
+[ETH/USDT stop_loss] SHORT entry=2011.24 exit=2045.69 qty=1.1486 | Gross: -39.57 | Fees: 1.86 | Net: -41.43 | Cash: 97786.46
+[SOL/USDT stop_loss] SHORT entry=85.54 exit=87.17 qty=26.8220 | Gross: -43.78 | Fees: 1.85 | Net: -45.63 | Cash: 100035.22
+[SOL/USDT | 2026-03-10 12:00:00] ML SHORT | p=0.173 | conf=0.654 | regime=ranging
+[SOL/USDT stop_loss] SHORT entry=86.48 exit=88.07 qty=28.9253 | Gross: -45.96 | Fees: 2.02 | Net: -47.98 | Cash: 99987.24
+[SOL/USDT | 2026-03-10 18:00:00] ML SHORT | p=0.327 | conf=0.346 | regime=trending
+[ETH/USDT | 2026-03-10 19:00:00] ML SHORT | p=0.304 | conf=0.393 | regime=trending
+[BTC/USDT | 2026-03-11 04:00:00] ML LONG | p=0.692 | conf=0.383 | regime=ranging
+[BTC/USDT stop_loss] LONG entry=70160.33 exit=69143.28 qty=0.0317 | Gross: -32.27 | Fees: 1.77 | Net: -34.04 | Cash: 95349.27
+[SOL/USDT take_profit] SHORT entry=86.17 exit=84.65 qty=27.2940 | Gross: 41.52 | Fees: 1.86 | Net: 39.65 | Cash: 97740.89
+[BTC/USDT | 2026-03-11 18:00:00] ML LONG | p=0.587 | conf=0.175 | regime=trending
+[ETH/USDT breakeven_stop] SHORT entry=2036.54 exit=2076.69 qty=1.1058 | Gross: -44.40 | Fees: 1.82 | Net: -46.22 | Cash: 97681.90
+[ETH/USDT | 2026-03-11 22:00:00] ML SHORT | p=0.336 | conf=0.328 | regime=trending
+[SOL/USDT | 2026-03-11 23:00:00] ML SHORT | p=0.095 | conf=0.810 | regime=ranging
+[BTC/USDT stop_loss] LONG entry=70648.24 exit=69327.81 qty=0.0321 | Gross: -42.33 | Fees: 1.79 | Net: -44.12 | Cash: 95336.45
+[BTC/USDT | 2026-03-12 05:00:00] ML SHORT | p=0.333 | conf=0.334 | regime=trending
+[BTC/USDT stop_loss] SHORT entry=69439.97 exit=70458.05 qty=0.0331 | Gross: -33.71 | Fees: 1.85 | Net: -35.56 | Cash: 95300.89
+[BTC/USDT | 2026-03-12 13:00:00] ML SHORT | p=0.038 | conf=0.924 | regime=ranging
+[BTC/USDT stop_loss] SHORT entry=69835.86 exit=71459.89 qty=0.0317 | Gross: -51.49 | Fees: 1.79 | Net: -53.28 | Cash: 95247.61
+[ETH/USDT breakeven_stop] SHORT entry=2059.96 exit=2118.25 qty=1.1157 | Gross: -65.03 | Fees: 1.86 | Net: -66.90 | Cash: 97478.92
+[SOL/USDT breakeven_stop] SHORT entry=86.56 exit=89.62 qty=26.2002 | Gross: -80.11 | Fees: 1.85 | Net: -81.96 | Cash: 99664.82
+[ETH/USDT | 2026-03-13 06:00:00] ML SHORT | p=0.300 | conf=0.400 | regime=trending
+[SOL/USDT | 2026-03-13 07:00:00] ML SHORT | p=0.288 | conf=0.423 | regime=trending
+[ETH/USDT stop_loss] SHORT entry=2091.69 exit=2127.44 qty=1.1428 | Gross: -40.85 | Fees: 1.93 | Net: -42.78 | Cash: 97331.98
+[SOL/USDT stop_loss] SHORT entry=88.52 exit=90.18 qty=25.8703 | Gross: -42.85 | Fees: 1.85 | Net: -44.70 | Cash: 99577.35
+[BTC/USDT | 2026-03-13 11:00:00] ML LONG | p=0.621 | conf=0.243 | regime=trending
+[ETH/USDT | 2026-03-13 15:00:00] ML SHORT | p=0.265 | conf=0.471 | regime=trending
+[BTC/USDT breakeven_stop] LONG entry=72299.50 exit=70979.09 qty=0.0335 | Gross: -44.29 | Fees: 1.92 | Net: -46.21 | Cash: 97209.33
+[SOL/USDT | 2026-03-13 17:00:00] ML SHORT | p=0.145 | conf=0.710 | regime=trending
+[BTC/USDT | 2026-03-13 20:00:00] ML SHORT | p=0.384 | conf=0.232 | regime=trending
+[ETH/USDT take_profit] SHORT entry=2125.73 exit=2078.60 qty=1.0922 | Gross: 51.47 | Fees: 1.84 | Net: 49.63 | Cash: 94970.98
+[SOL/USDT take_profit] SHORT entry=88.64 exit=86.70 qty=26.6758 | Gross: 51.80 | Fees: 1.87 | Net: 49.93 | Cash: 97385.58
+[SOL/USDT | 2026-03-14 12:00:00] ML SHORT | p=0.218 | conf=0.563 | regime=trending
+[ETH/USDT | 2026-03-14 14:00:00] ML SHORT | p=0.303 | conf=0.395 | regime=ranging
+[ETH/USDT stop_loss] SHORT entry=2075.45 exit=2100.75 qty=1.0918 | Gross: -27.63 | Fees: 1.82 | Net: -29.45 | Cash: 95108.44
+[SOL/USDT stop_loss] SHORT entry=87.06 exit=88.34 qty=25.8170 | Gross: -33.07 | Fees: 1.81 | Net: -34.88 | Cash: 97321.26
+[SOL/USDT | 2026-03-15 11:00:00] ML LONG | p=0.660 | conf=0.320 | regime=trending
+[ETH/USDT | 2026-03-15 12:00:00] ML SHORT | p=0.177 | conf=0.646 | regime=trending
+[ETH/USDT stop_loss] SHORT entry=2108.63 exit=2137.53 qty=1.0336 | Gross: -29.88 | Fees: 1.76 | Net: -31.63 | Cash: 94963.37
+[BTC/USDT breakeven_stop] SHORT entry=71376.65 exit=72730.47 qty=0.0315 | Gross: -42.58 | Fees: 1.81 | Net: -44.40 | Cash: 97164.08
+[SOL/USDT take_profit] LONG entry=88.55 exit=92.37 qty=26.2704 | Gross: 100.47 | Fees: 1.90 | Net: 98.57 | Cash: 99588.90
+[BTC/USDT | 2026-03-16 08:00:00] ML SHORT | p=0.158 | conf=0.685 | regime=trending
+[SOL/USDT | 2026-03-16 13:00:00] ML LONG | p=0.646 | conf=0.292 | regime=trending
+[BTC/USDT stop_loss] SHORT entry=73073.49 exit=73981.05 qty=0.0328 | Gross: -29.73 | Fees: 1.93 | Net: -31.66 | Cash: 97159.00
+[SOL/USDT take_profit] LONG entry=93.68 exit=95.86 qty=25.6012 | Gross: 55.98 | Fees: 1.94 | Net: 54.04 | Cash: 99611.28
+[SOL/USDT | 2026-03-17 00:00:00] ML SHORT | p=0.105 | conf=0.791 | regime=trending
+[BTC/USDT | 2026-03-17 03:00:00] ML SHORT | p=0.323 | conf=0.353 | regime=ranging
+[ETH/USDT | 2026-03-17 03:00:00] ML SHORT | p=0.076 | conf=0.847 | regime=ranging
+[BTC/USDT take_profit] SHORT entry=74470.15 exit=72935.95 qty=0.0300 | Gross: 46.02 | Fees: 1.77 | Net: 44.25 | Cash: 95130.70
+[ETH/USDT take_profit] SHORT entry=2316.95 exit=2269.61 qty=0.9473 | Gross: 44.84 | Fees: 1.74 | Net: 43.10 | Cash: 97368.55
+[SOL/USDT take_profit] SHORT entry=95.20 exit=92.11 qty=24.4766 | Gross: 75.60 | Fees: 1.83 | Net: 73.77 | Cash: 99772.41
+[ETH/USDT | 2026-03-18 12:00:00] ML SHORT | p=0.368 | conf=0.263 | regime=trending
+[SOL/USDT | 2026-03-18 12:00:00] ML SHORT | p=0.417 | conf=0.166 | regime=trending
+[ETH/USDT take_profit] SHORT entry=2243.83 exit=2190.48 qty=1.0594 | Gross: 56.51 | Fees: 1.88 | Net: 54.63 | Cash: 97561.48
+[ETH/USDT | 2026-03-18 23:00:00] ML LONG | p=0.725 | conf=0.451 | regime=trending
+
+============================================================
+PROFITABILITY ANALYSIS
+============================================================
+Total Return             : -0.17%
+Sharpe Ratio             : -4.42
+Max Drawdown             : 0.80%
+Win Rate                 : 41.5% (27/65)
+Profit Factor            : 0.91
+Expectancy per Trade     : $-2.66
+
+Exit Reasons Breakdown:
+  stop_loss: 29
+  take_profit: 27
+  breakeven_stop: 9
+
+Is this strategy profitable after costs?
+-> NO. Strict transaction costs (10bps) and slippage consume the alpha.
+============================================================
+
+[OK] Performance charts saved: equity_curve.png, drawdown_curve.png

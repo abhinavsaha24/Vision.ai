@@ -1,0 +1,56 @@
+Initializing Edge Discovery Engine...
+Computing Institutional Features...
+
+--- EDGE DISCOVERY MINING ---
+Total valid bars analyzed: 990
+Base Win Rate (>0%): 50.81%
+Base Average Return: -0.0030%
+-----------------------------------
+[LONG | Volume Delta Spike]
+  Count: 63 trades
+  Win Rate: 50.79% | High Conviction (>50bps): 4.76%
+  Average Return: -0.0497%
+
+[LONG | Imbalance Spike]
+  Count: 193 trades
+  Win Rate: 55.44% | High Conviction (>50bps): 7.77%
+  Average Return: 0.0024%
+
+[LONG | Vol Breakout Up]
+  Count: 2 trades
+  Win Rate: 0.00% | High Conviction (>50bps): 0.00%
+  Average Return: -0.2641%
+
+[Breakout + Volume Delta] No setups found in sample.
+[LONG | Breakout + Imbalance]
+  Count: 1 trades
+  Win Rate: 0.00% | High Conviction (>50bps): 0.00%
+  Average Return: -0.2005%
+
+[THE GOD SETUP (Breakout+Vol+Imb)] No setups found in sample.
+[SHORT | Volume Delta Dump]
+  Count: 83 trades
+  Win Rate: 54.22% | High Conviction (>50bps): 10.84%
+  Average Return: 0.0172%
+
+[SHORT | Imbalance Dump]
+  Count: 206 trades
+  Win Rate: 45.63% | High Conviction (>50bps): 9.22%
+  Average Return: -0.0327%
+
+[SHORT | Vol Breakout Down]
+  Count: 2 trades
+  Win Rate: 100.00% | High Conviction (>50bps): 0.00%
+  Average Return: 0.4205%
+
+[SHORT | Breakout + Volume Dump]
+  Count: 1 trades
+  Win Rate: 100.00% | High Conviction (>50bps): 0.00%
+  Average Return: 0.4735%
+
+[SHORT | Breakout + Imbalance Dump]
+  Count: 1 trades
+  Win Rate: 100.00% | High Conviction (>50bps): 0.00%
+  Average Return: 0.3676%
+
+[THE GOD SETUP (Breakout+Vol+Imb)] No setups found in sample.

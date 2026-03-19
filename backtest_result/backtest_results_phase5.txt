@@ -1,0 +1,101 @@
+============================================================
+VISION-AI: INSTITUTIONAL MULTI-SYMBOL BACKTEST ENGINE
+============================================================
+Fetching BTC/USDT (3000 bars, 5m)...
+Fetching ETH/USDT (3000 bars, 5m)...
+Fetching SOL/USDT (3000 bars, 5m)...
+
+Aligning data across assets to ensure no look-ahead bias...
+Aligned dataset: 975 concurrent 5m bars.
+Train set: 487 bars. Test set (Out-Of-Sample): 488 bars.
+Training AlphaModel for BTC/USDT...
+Training AlphaModel for ETH/USDT...
+Training AlphaModel for SOL/USDT...
+
+Initializing Strict Backtest Environment...
+
+Running Bar-by-Bar Out-Of-Sample Simulation...
+[BTC/USDT | 2026-03-16 20:45:00] ENSEMBLE SHORT TRIGGERED | p=0.100 | conf=0.860 | dom=AlphaModel
+[ETH/USDT | 2026-03-16 20:45:00] ENSEMBLE SHORT TRIGGERED | p=0.027 | conf=0.860 | dom=AlphaModel
+[SOL/USDT | 2026-03-16 20:45:00] ENSEMBLE SHORT TRIGGERED | p=0.044 | conf=0.860 | dom=AlphaModel
+[ETH/USDT | 2026-03-16 21:50:00] ENSEMBLE SHORT TRIGGERED | p=0.022 | conf=0.860 | dom=AlphaModel
+[SOL/USDT | 2026-03-16 21:55:00] ENSEMBLE SHORT TRIGGERED | p=0.207 | conf=0.860 | dom=AlphaModel
+[BTC/USDT | 2026-03-16 22:10:00] ENSEMBLE SHORT TRIGGERED | p=0.062 | conf=0.860 | dom=AlphaModel
+[SOL/USDT | 2026-03-16 22:10:00] ENSEMBLE SHORT TRIGGERED | p=0.164 | conf=0.860 | dom=AlphaModel
+[SOL/USDT | 2026-03-16 23:10:00] ENSEMBLE LONG TRIGGERED | p=0.552 | conf=0.407 | dom=MeanReversion
+[SOL/USDT | 2026-03-16 23:15:00] ENSEMBLE LONG TRIGGERED | p=0.719 | conf=0.860 | dom=AlphaModel
+[BTC/USDT | 2026-03-17 01:15:00] ENSEMBLE SHORT TRIGGERED | p=0.125 | conf=0.860 | dom=AlphaModel
+[ETH/USDT | 2026-03-17 02:05:00] ENSEMBLE LONG TRIGGERED | p=0.907 | conf=0.860 | dom=AlphaModel
+[SOL/USDT | 2026-03-17 03:15:00] ENSEMBLE LONG TRIGGERED | p=0.871 | conf=0.860 | dom=AlphaModel
+[ETH/USDT | 2026-03-17 03:35:00] ENSEMBLE LONG TRIGGERED | p=0.862 | conf=0.860 | dom=AlphaModel
+[BTC/USDT | 2026-03-17 03:45:00] ENSEMBLE LONG TRIGGERED | p=0.639 | conf=0.860 | dom=AlphaModel
+[SOL/USDT | 2026-03-17 03:50:00] ENSEMBLE LONG TRIGGERED | p=0.420 | conf=0.407 | dom=MeanReversion
+[SOL/USDT | 2026-03-17 03:55:00] ENSEMBLE LONG TRIGGERED | p=0.434 | conf=0.407 | dom=MeanReversion
+[SOL/USDT | 2026-03-17 04:00:00] ENSEMBLE LONG TRIGGERED | p=0.574 | conf=0.407 | dom=MeanReversion
+[SOL/USDT | 2026-03-17 04:05:00] ENSEMBLE LONG TRIGGERED | p=0.806 | conf=0.860 | dom=AlphaModel
+[ETH/USDT | 2026-03-17 05:50:00] ENSEMBLE LONG TRIGGERED | p=0.647 | conf=0.860 | dom=AlphaModel
+[BTC/USDT | 2026-03-17 07:50:00] ENSEMBLE LONG TRIGGERED | p=0.597 | conf=0.407 | dom=MeanReversion
+[BTC/USDT | 2026-03-17 08:00:00] ENSEMBLE SHORT TRIGGERED | p=0.141 | conf=0.860 | dom=AlphaModel
+[SOL/USDT | 2026-03-17 08:15:00] ENSEMBLE SHORT TRIGGERED | p=0.078 | conf=0.860 | dom=AlphaModel
+[ETH/USDT | 2026-03-17 10:05:00] ENSEMBLE LONG TRIGGERED | p=0.486 | conf=0.407 | dom=MeanReversion
+[ETH/USDT | 2026-03-17 10:15:00] ENSEMBLE LONG TRIGGERED | p=0.522 | conf=0.407 | dom=MeanReversion
+[ETH/USDT | 2026-03-17 10:20:00] ENSEMBLE LONG TRIGGERED | p=0.483 | conf=0.407 | dom=MeanReversion
+[ETH/USDT | 2026-03-17 10:25:00] ENSEMBLE LONG TRIGGERED | p=0.503 | conf=0.407 | dom=MeanReversion
+[ETH/USDT | 2026-03-17 10:30:00] ENSEMBLE LONG TRIGGERED | p=0.575 | conf=0.407 | dom=MeanReversion
+[ETH/USDT | 2026-03-17 10:35:00] ENSEMBLE LONG TRIGGERED | p=0.907 | conf=0.860 | dom=AlphaModel
+[BTC/USDT | 2026-03-17 12:05:00] ENSEMBLE SHORT TRIGGERED | p=0.089 | conf=0.860 | dom=AlphaModel
+[SOL/USDT | 2026-03-17 12:50:00] ENSEMBLE LONG TRIGGERED | p=0.457 | conf=0.407 | dom=MeanReversion
+[SOL/USDT | 2026-03-17 12:55:00] ENSEMBLE LONG TRIGGERED | p=0.588 | conf=0.407 | dom=MeanReversion
+[SOL/USDT | 2026-03-17 13:05:00] ENSEMBLE SHORT TRIGGERED | p=0.232 | conf=0.860 | dom=AlphaModel
+[SOL/USDT | 2026-03-17 13:35:00] ENSEMBLE SHORT TRIGGERED | p=0.578 | conf=0.407 | dom=MeanReversion
+[SOL/USDT | 2026-03-17 13:40:00] ENSEMBLE SHORT TRIGGERED | p=0.563 | conf=0.407 | dom=MeanReversion
+[SOL/USDT | 2026-03-17 13:50:00] ENSEMBLE LONG TRIGGERED | p=0.752 | conf=0.860 | dom=AlphaModel
+[ETH/USDT | 2026-03-17 14:40:00] ENSEMBLE SHORT TRIGGERED | p=0.238 | conf=0.860 | dom=AlphaModel
+[BTC/USDT | 2026-03-17 16:10:00] ENSEMBLE SHORT TRIGGERED | p=0.217 | conf=0.860 | dom=AlphaModel
+[SOL/USDT | 2026-03-17 17:55:00] ENSEMBLE LONG TRIGGERED | p=0.808 | conf=0.860 | dom=AlphaModel
+[ETH/USDT | 2026-03-17 18:45:00] ENSEMBLE LONG TRIGGERED | p=0.890 | conf=0.860 | dom=AlphaModel
+[BTC/USDT | 2026-03-17 18:50:00] ENSEMBLE SHORT TRIGGERED | p=0.160 | conf=0.860 | dom=AlphaModel
+[SOL/USDT | 2026-03-17 22:00:00] ENSEMBLE SHORT TRIGGERED | p=0.070 | conf=0.860 | dom=AlphaModel
+[ETH/USDT | 2026-03-17 22:50:00] ENSEMBLE LONG TRIGGERED | p=0.716 | conf=0.860 | dom=AlphaModel
+[BTC/USDT | 2026-03-17 22:55:00] ENSEMBLE SHORT TRIGGERED | p=0.555 | conf=0.407 | dom=MeanReversion
+[BTC/USDT | 2026-03-17 23:05:00] ENSEMBLE SHORT TRIGGERED | p=0.358 | conf=0.860 | dom=AlphaModel
+[SOL/USDT | 2026-03-18 02:05:00] ENSEMBLE SHORT TRIGGERED | p=0.359 | conf=0.860 | dom=AlphaModel
+[ETH/USDT | 2026-03-18 02:55:00] ENSEMBLE LONG TRIGGERED | p=0.719 | conf=0.860 | dom=AlphaModel
+[BTC/USDT | 2026-03-18 03:20:00] ENSEMBLE SHORT TRIGGERED | p=0.071 | conf=0.860 | dom=AlphaModel
+[SOL/USDT | 2026-03-18 06:15:00] ENSEMBLE SHORT TRIGGERED | p=0.323 | conf=0.860 | dom=AlphaModel
+[ETH/USDT | 2026-03-18 07:00:00] ENSEMBLE LONG TRIGGERED | p=0.790 | conf=0.860 | dom=AlphaModel
+[BTC/USDT | 2026-03-18 07:25:00] ENSEMBLE LONG TRIGGERED | p=0.978 | conf=0.860 | dom=AlphaModel
+[SOL/USDT | 2026-03-18 10:20:00] ENSEMBLE SHORT TRIGGERED | p=0.164 | conf=0.860 | dom=AlphaModel
+[ETH/USDT | 2026-03-18 11:05:00] ENSEMBLE LONG TRIGGERED | p=0.449 | conf=0.407 | dom=MeanReversion
+[ETH/USDT | 2026-03-18 11:15:00] ENSEMBLE SHORT TRIGGERED | p=0.596 | conf=0.407 | dom=MeanReversion
+[ETH/USDT | 2026-03-18 11:25:00] ENSEMBLE LONG TRIGGERED | p=0.710 | conf=0.860 | dom=AlphaModel
+[BTC/USDT | 2026-03-18 11:30:00] ENSEMBLE LONG TRIGGERED | p=0.583 | conf=0.407 | dom=MeanReversion
+[BTC/USDT | 2026-03-18 11:35:00] ENSEMBLE LONG TRIGGERED | p=0.706 | conf=0.860 | dom=AlphaModel
+[ETH/USDT | 2026-03-18 11:35:00] ENSEMBLE LONG TRIGGERED | p=0.651 | conf=0.860 | dom=AlphaModel
+[SOL/USDT | 2026-03-18 11:35:00] ENSEMBLE LONG TRIGGERED | p=0.619 | conf=0.860 | dom=AlphaModel
+[SOL/USDT | 2026-03-18 12:35:00] ENSEMBLE LONG TRIGGERED | p=0.749 | conf=0.860 | dom=AlphaModel
+[ETH/USDT | 2026-03-18 12:45:00] ENSEMBLE LONG TRIGGERED | p=0.426 | conf=0.407 | dom=MeanReversion
+[ETH/USDT | 2026-03-18 12:50:00] ENSEMBLE LONG TRIGGERED | p=0.494 | conf=0.407 | dom=MeanReversion
+[ETH/USDT | 2026-03-18 12:55:00] ENSEMBLE LONG TRIGGERED | p=0.533 | conf=0.407 | dom=MeanReversion
+[ETH/USDT | 2026-03-18 13:00:00] ENSEMBLE LONG TRIGGERED | p=0.605 | conf=0.860 | dom=AlphaModel
+
+============================================================
+PROFITABILITY ANALYSIS
+============================================================
+Total Return             : -0.03%
+Sharpe Ratio             : -14.39
+Max Drawdown             : 0.04%
+Win Rate                 : 35.9% (14/39)
+Profit Factor            : 0.31
+Expectancy per Trade     : $-2.03
+
+Exit Reasons Breakdown:
+  stop_loss: 14
+  tp_1_partial: 3
+  time_exit: 22
+
+Is this strategy profitable after costs?
+-> NO. Strict transaction costs (10bps) and slippage consume the alpha.
+============================================================
+
+[OK] Performance charts saved: equity_curve.png, drawdown_curve.png

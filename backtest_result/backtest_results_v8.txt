@@ -1,0 +1,77 @@
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\numpy\lib\_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\numpy\lib\_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\numpy\lib\_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+Computing alpha features on 1000 bars...
+Alpha features computed: 56 new columns
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\numpy\lib\_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\numpy\lib\_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\numpy\lib\_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+Computing alpha features on 1000 bars...
+Alpha features computed: 56 new columns
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\numpy\lib\_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\numpy\lib\_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\numpy\lib\_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+Computing alpha features on 1000 bars...
+Alpha features computed: 56 new columns
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+LightGBM cal AUC: 0.6421, Acc: 0.5946
+XGBoost cal AUC: 0.6115, Acc: 0.5811
+AlphaModel fitted. Ensemble AUC: 0.6536
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+LightGBM cal AUC: 0.6557, Acc: 0.5946
+XGBoost cal AUC: 0.6122, Acc: 0.5946
+AlphaModel fitted. Ensemble AUC: 0.6542
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+LightGBM cal AUC: 0.6029, Acc: 0.5541
+XGBoost cal AUC: 0.5341, Acc: 0.5541
+AlphaModel fitted. Ensemble AUC: 0.5663
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+============================================================
+VISION-AI: INSTITUTIONAL MULTI-SYMBOL BACKTEST ENGINE
+============================================================
+Fetching BTC/USDT (3000 bars, 5m)...
+Fetching ETH/USDT (3000 bars, 5m)...
+Fetching SOL/USDT (3000 bars, 5m)...
+
+Aligning data across assets to ensure no look-ahead bias...
+Aligned dataset: 974 concurrent 5m bars.
+Train set: 487 bars. Test set (Out-Of-Sample): 487 bars.
+Training AlphaModel for BTC/USDT...
+Training AlphaModel for ETH/USDT...
+Training AlphaModel for SOL/USDT...
+
+Initializing Strict Backtest Environment...
+
+Running Bar-by-Bar Out-Of-Sample Simulation...
+
+Simulating:   0%|          | 0/487 [00:00<?, ?it/s]C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+
+Simulating:   0%|          | 0/487 [00:00<?, ?it/s]
+Traceback (most recent call last):
+  File "C:\Users\abhin\Music\vision.ai\scripts\run_backtest.py", line 448, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\abhin\Music\vision.ai\scripts\run_backtest.py", line 359, in main
+    if result.get("status") == "TRADE_EXECUTED":
+       ^^^^^^
+UnboundLocalError: cannot access local variable 'result' where it is not associated with a value

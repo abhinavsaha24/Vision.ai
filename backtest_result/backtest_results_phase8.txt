@@ -1,0 +1,35 @@
+============================================================
+VISION-AI: INSTITUTIONAL MULTI-SYMBOL BACKTEST ENGINE
+============================================================
+Fetching BTC/USDT (3000 bars, 5m)...
+Fetching ETH/USDT (3000 bars, 5m)...
+Fetching SOL/USDT (3000 bars, 5m)...
+
+Aligning data across assets to ensure no look-ahead bias...
+Aligned dataset: 974 concurrent 5m bars.
+Train set: 487 bars. Test set (Out-Of-Sample): 487 bars.
+Training AlphaModel for BTC/USDT...
+Training AlphaModel for ETH/USDT...
+Training AlphaModel for SOL/USDT...
+
+Initializing Strict Backtest Environment...
+
+Running Bar-by-Bar Out-Of-Sample Simulation...
+
+============================================================
+PROFITABILITY ANALYSIS
+============================================================
+Total Return             : 0.00%
+Sharpe Ratio             : 0.00
+Max Drawdown             : 0.00%
+Win Rate                 : 0.0% (0/0)
+Profit Factor            : 0.00
+Expectancy per Trade     : $0.00
+
+Exit Reasons Breakdown:
+
+Is this strategy profitable after costs?
+-> INCONCLUSIVE: Strategy is too strict to fire trades in this period.
+============================================================
+
+[OK] Performance charts saved: equity_curve.png, drawdown_curve.png

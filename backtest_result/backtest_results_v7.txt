@@ -1,0 +1,512 @@
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\numpy\lib\_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\numpy\lib\_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\numpy\lib\_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+Computing alpha features on 1000 bars...
+Alpha features computed: 56 new columns
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\numpy\lib\_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\numpy\lib\_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\numpy\lib\_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+Computing alpha features on 1000 bars...
+Alpha features computed: 56 new columns
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\numpy\lib\_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\numpy\lib\_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\numpy\lib\_function_base_impl.py:3015: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+Computing alpha features on 1000 bars...
+Alpha features computed: 56 new columns
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+LightGBM cal AUC: 0.6576, Acc: 0.5811
+XGBoost cal AUC: 0.6564, Acc: 0.6216
+AlphaModel fitted. Ensemble AUC: 0.6646
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+LightGBM cal AUC: 0.6585, Acc: 0.5676
+XGBoost cal AUC: 0.5934, Acc: 0.5811
+AlphaModel fitted. Ensemble AUC: 0.6473
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+LightGBM cal AUC: 0.6205, Acc: 0.6081
+XGBoost cal AUC: 0.4908, Acc: 0.5270
+AlphaModel fitted. Ensemble AUC: 0.5817
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+============================================================
+VISION-AI: INSTITUTIONAL MULTI-SYMBOL BACKTEST ENGINE
+============================================================
+Fetching BTC/USDT (3000 bars, 5m)...
+Fetching ETH/USDT (3000 bars, 5m)...
+Fetching SOL/USDT (3000 bars, 5m)...
+
+Aligning data across assets to ensure no look-ahead bias...
+Aligned dataset: 975 concurrent 5m bars.
+Train set: 487 bars. Test set (Out-Of-Sample): 488 bars.
+Training AlphaModel for BTC/USDT...
+Training AlphaModel for ETH/USDT...
+Training AlphaModel for SOL/USDT...
+
+Initializing Strict Backtest Environment...
+
+Running Bar-by-Bar Out-Of-Sample Simulation...
+
+Simulating:   0%|          | 0/488 [00:00<?, ?it/s]C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] BUY MARKET 0.025918 BTC/USDT @ 73987.12 (slip=47.19)
+ORDER FILLED: PAPER-000001 buy 0.025918 BTC/USDT @ 73987.12
+Opened long 0.025918 BTC/USDT @ 73987.12
+[PAPER] Executed long BTC/USDT @ 73987.12 qty=0.025918 slip=0.0638% comm=1.9176
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] SELL MARKET 20.534362 SOL/USDT @ 95.38 (slip=-0.15)
+ORDER FILLED: PAPER-000002 sell 20.534362 SOL/USDT @ 95.38
+Opened short 20.534362 SOL/USDT @ 95.38
+[PAPER] Executed short SOL/USDT @ 95.38 qty=20.534362 slip=0.1604% comm=1.9585
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] SELL MARKET 0.791781 ETH/USDT @ 2330.73 (slip=-0.92)
+ORDER FILLED: PAPER-000003 sell 0.791781 ETH/USDT @ 2330.73
+Opened short 0.791781 ETH/USDT @ 2330.73
+[PAPER] Executed short ETH/USDT @ 2330.73 qty=0.791781 slip=0.0393% comm=1.8454
+Closed short ETH/USDT @ 2356.27 ù PnL: -20.22
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] SELL MARKET 0.761057 ETH/USDT @ 2344.16 (slip=-4.08)
+ORDER FILLED: PAPER-000004 sell 0.761057 ETH/USDT @ 2344.16
+Opened short 0.761057 ETH/USDT @ 2344.16
+[PAPER] Executed short ETH/USDT @ 2344.16 qty=0.761057 slip=0.1738% comm=1.7840
+Closed short SOL/USDT @ 96.43 ù PnL: -21.63
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] SELL MARKET 18.915659 SOL/USDT @ 96.18 (slip=-0.18)
+ORDER FILLED: PAPER-000005 sell 18.915659 SOL/USDT @ 96.18
+Opened short 18.915659 SOL/USDT @ 96.18
+[PAPER] Executed short SOL/USDT @ 96.18 qty=18.915659 slip=0.1837% comm=1.8194
+Closed short ETH/USDT @ 2372.87 ù PnL: -21.85
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] SELL MARKET 0.808598 ETH/USDT @ 2377.32 (slip=-2.09)
+ORDER FILLED: PAPER-000006 sell 0.808598 ETH/USDT @ 2377.32
+Opened short 0.808598 ETH/USDT @ 2377.32
+[PAPER] Executed short ETH/USDT @ 2377.32 qty=0.808598 slip=0.0880% comm=1.9223
+Closed short SOL/USDT @ 97.54 ù PnL: -25.67
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] SELL MARKET 18.317339 SOL/USDT @ 97.26 (slip=-0.01)
+ORDER FILLED: PAPER-000007 sell 18.317339 SOL/USDT @ 97.26
+Opened short 18.317339 SOL/USDT @ 97.26
+[PAPER] Executed short SOL/USDT @ 97.26 qty=18.317339 slip=0.0118% comm=1.7815
+[PAPER] BUY MARKET 0.808598 ETH/USDT @ 2335.29 (slip=2.92)
+ORDER FILLED: PAPER-000008 buy 0.808598 ETH/USDT @ 2335.29
+Closed short ETH/USDT @ 2335.29 ù PnL: 33.98
+[PAPER] BUY MARKET 18.317339 SOL/USDT @ 95.54 (slip=0.01)
+ORDER FILLED: PAPER-000009 buy 18.317339 SOL/USDT @ 95.54
+Closed short SOL/USDT @ 95.54 ù PnL: 31.50
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] BUY MARKET 0.839999 ETH/USDT @ 2338.70 (slip=3.97)
+ORDER FILLED: PAPER-000010 buy 0.839999 ETH/USDT @ 2338.70
+Opened long 0.839999 ETH/USDT @ 2338.70
+[PAPER] Executed long ETH/USDT @ 2338.70 qty=0.839999 slip=0.1702% comm=1.9645
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] BUY MARKET 19.620737 SOL/USDT @ 95.75 (slip=0.12)
+ORDER FILLED: PAPER-000011 buy 19.620737 SOL/USDT @ 95.75
+Opened long 19.620737 SOL/USDT @ 95.75
+[PAPER] Executed long SOL/USDT @ 95.75 qty=19.620737 slip=0.1249% comm=1.8787
+[PAPER] SELL MARKET 0.025918 BTC/USDT @ 75307.51 (slip=-76.09)
+ORDER FILLED: PAPER-000012 sell 0.025918 BTC/USDT @ 75307.51
+Closed long BTC/USDT @ 75307.51 ù PnL: 34.22
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] SELL MARKET 0.024579 BTC/USDT @ 75242.62 (slip=-34.33)
+ORDER FILLED: PAPER-000013 sell 0.024579 BTC/USDT @ 75242.62
+Opened short 0.024579 BTC/USDT @ 75242.62
+[PAPER] Executed short BTC/USDT @ 75242.62 qty=0.024579 slip=0.0456% comm=1.8494
+Closed long ETH/USDT @ 2343.07 ù PnL: 3.67
+Closed long SOL/USDT @ 94.79 ù PnL: -18.83
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] BUY MARKET 0.772868 ETH/USDT @ 2345.74 (slip=3.30)
+ORDER FILLED: PAPER-000014 buy 0.772868 ETH/USDT @ 2345.74
+Opened long 0.772868 ETH/USDT @ 2345.74
+[PAPER] Executed long ETH/USDT @ 2345.74 qty=0.772868 slip=0.1410% comm=1.8129
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] BUY MARKET 19.376322 SOL/USDT @ 94.95 (slip=0.16)
+ORDER FILLED: PAPER-000015 buy 19.376322 SOL/USDT @ 94.95
+Opened long 19.376322 SOL/USDT @ 94.95
+[PAPER] Executed long SOL/USDT @ 94.95 qty=19.376322 slip=0.1709% comm=1.8398
+Closed long ETH/USDT @ 2321.78 ù PnL: -18.52
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] BUY MARKET 0.777461 ETH/USDT @ 2321.07 (slip=2.13)
+ORDER FILLED: PAPER-000016 buy 0.777461 ETH/USDT @ 2321.07
+Opened long 0.777461 ETH/USDT @ 2321.07
+[PAPER] Executed long ETH/USDT @ 2321.07 qty=0.777461 slip=0.0920% comm=1.8045
+Closed long SOL/USDT @ 94.00 ù PnL: -18.45
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] BUY MARKET 20.505536 SOL/USDT @ 94.06 (slip=0.13)
+ORDER FILLED: PAPER-000017 buy 20.505536 SOL/USDT @ 94.06
+Opened long 20.505536 SOL/USDT @ 94.06
+[PAPER] Executed long SOL/USDT @ 94.06 qty=20.505536 slip=0.1361% comm=1.9287
+Closed short BTC/USDT @ 74469.82 ù PnL: 18.99
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] BUY MARKET 0.024705 BTC/USDT @ 74555.93 (slip=146.93)
+ORDER FILLED: PAPER-000018 buy 0.024705 BTC/USDT @ 74555.93
+Opened long 0.024705 BTC/USDT @ 74555.93
+[PAPER] Executed long BTC/USDT @ 74555.93 qty=0.024705 slip=0.1975% comm=1.8419
+
+Simulating:  24%|##4       | 118/488 [00:00<00:00, 1179.51it/s]Closed long ETH/USDT @ 2329.66 ù PnL: 6.67
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] BUY MARKET 0.803880 ETH/USDT @ 2330.58 (slip=0.77)
+ORDER FILLED: PAPER-000019 buy 0.803880 ETH/USDT @ 2330.58
+Opened long 0.803880 ETH/USDT @ 2330.58
+[PAPER] Executed long ETH/USDT @ 2330.58 qty=0.803880 slip=0.0330% comm=1.8735
+Closed long SOL/USDT @ 94.72 ù PnL: 13.58
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] SELL MARKET 19.423363 SOL/USDT @ 94.52 (slip=-0.06)
+ORDER FILLED: PAPER-000020 sell 19.423363 SOL/USDT @ 94.52
+Opened short 19.423363 SOL/USDT @ 94.52
+[PAPER] Executed short SOL/USDT @ 94.52 qty=19.423363 slip=0.0597% comm=1.8360
+Closed long BTC/USDT @ 74280.89 ù PnL: -6.79
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] SELL MARKET 0.024046 BTC/USDT @ 74232.09 (slip=-91.78)
+ORDER FILLED: PAPER-000021 sell 0.024046 BTC/USDT @ 74232.09
+Opened short 0.024046 BTC/USDT @ 74232.09
+[PAPER] Executed short BTC/USDT @ 74232.09 qty=0.024046 slip=0.1235% comm=1.7850
+Closed long ETH/USDT @ 2327.02 ù PnL: -2.86
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] SELL MARKET 0.776886 ETH/USDT @ 2327.40 (slip=-0.38)
+ORDER FILLED: PAPER-000022 sell 0.776886 ETH/USDT @ 2327.40
+Opened short 0.776886 ETH/USDT @ 2327.40
+[PAPER] Executed short ETH/USDT @ 2327.40 qty=0.776886 slip=0.0164% comm=1.8081
+Closed short SOL/USDT @ 93.81 ù PnL: 13.86
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+Closed short BTC/USDT @ 73801.80 ù PnL: 10.35
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] BUY MARKET 0.026042 BTC/USDT @ 73812.02 (slip=7.28)
+ORDER FILLED: PAPER-000023 buy 0.026042 BTC/USDT @ 73812.02
+Opened long 0.026042 BTC/USDT @ 73812.02
+[PAPER] Executed long BTC/USDT @ 73812.02 qty=0.026042 slip=0.0099% comm=1.9222
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] SELL MARKET 20.575200 SOL/USDT @ 93.50 (slip=-0.09)
+ORDER FILLED: PAPER-000024 sell 20.575200 SOL/USDT @ 93.50
+Opened short 20.575200 SOL/USDT @ 93.50
+[PAPER] Executed short SOL/USDT @ 93.50 qty=20.575200 slip=0.0994% comm=1.9237
+Closed short SOL/USDT @ 94.44 ù PnL: -19.40
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] BUY MARKET 19.809271 SOL/USDT @ 93.82 (slip=0.12)
+ORDER FILLED: PAPER-000025 buy 19.809271 SOL/USDT @ 93.82
+Opened long 19.809271 SOL/USDT @ 93.82
+[PAPER] Executed long SOL/USDT @ 93.82 qty=19.809271 slip=0.1314% comm=1.8586
+Closed short ETH/USDT @ 2352.51 ù PnL: -19.51
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] BUY MARKET 0.807115 ETH/USDT @ 2323.97 (slip=4.48)
+ORDER FILLED: PAPER-000026 buy 0.807115 ETH/USDT @ 2323.97
+Opened long 0.807115 ETH/USDT @ 2323.97
+[PAPER] Executed long ETH/USDT @ 2323.97 qty=0.807115 slip=0.1931% comm=1.8757
+
+Simulating:  48%|####8     | 236/488 [00:00<00:00, 1089.51it/s]Closed long BTC/USDT @ 74111.60 ù PnL: 7.80
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] SELL MARKET 0.024558 BTC/USDT @ 74054.45 (slip=-102.44)
+ORDER FILLED: PAPER-000027 sell 0.024558 BTC/USDT @ 74054.45
+Opened short 0.024558 BTC/USDT @ 74054.45
+[PAPER] Executed short BTC/USDT @ 74054.45 qty=0.024558 slip=0.1381% comm=1.8187
+Closed long SOL/USDT @ 94.38 ù PnL: 11.03
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] BUY MARKET 18.706500 SOL/USDT @ 94.47 (slip=0.09)
+ORDER FILLED: PAPER-000028 buy 18.706500 SOL/USDT @ 94.47
+Opened long 18.706500 SOL/USDT @ 94.47
+[PAPER] Executed long SOL/USDT @ 94.47 qty=18.706500 slip=0.0994% comm=1.7673
+Closed long ETH/USDT @ 2332.78 ù PnL: 7.11
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] BUY MARKET 0.757112 ETH/USDT @ 2338.66 (slip=3.95)
+ORDER FILLED: PAPER-000029 buy 0.757112 ETH/USDT @ 2338.66
+Opened long 0.757112 ETH/USDT @ 2338.66
+[PAPER] Executed long ETH/USDT @ 2338.66 qty=0.757112 slip=0.1691% comm=1.7706
+Closed short BTC/USDT @ 74575.39 ù PnL: -12.79
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] SELL MARKET 0.023711 BTC/USDT @ 74549.40 (slip=-25.99)
+ORDER FILLED: PAPER-000030 sell 0.023711 BTC/USDT @ 74549.40
+Opened short 0.023711 BTC/USDT @ 74549.40
+[PAPER] Executed short BTC/USDT @ 74549.40 qty=0.023711 slip=0.0349% comm=1.7677
+Closed long SOL/USDT @ 95.21 ù PnL: 13.77
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] SELL MARKET 18.575036 SOL/USDT @ 95.12 (slip=-0.09)
+ORDER FILLED: PAPER-000031 sell 18.575036 SOL/USDT @ 95.12
+Opened short 18.575036 SOL/USDT @ 95.12
+[PAPER] Executed short SOL/USDT @ 95.12 qty=18.575036 slip=0.0907% comm=1.7669
+Closed long ETH/USDT @ 2319.99 ù PnL: -14.13
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] BUY MARKET 0.788198 ETH/USDT @ 2326.84 (slip=4.27)
+ORDER FILLED: PAPER-000032 buy 0.788198 ETH/USDT @ 2326.84
+Opened long 0.788198 ETH/USDT @ 2326.84
+[PAPER] Executed long ETH/USDT @ 2326.84 qty=0.788198 slip=0.1840% comm=1.8340
+Closed short BTC/USDT @ 73810.71 ù PnL: 17.52
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] SELL MARKET 0.025281 BTC/USDT @ 73756.07 (slip=-106.76)
+ORDER FILLED: PAPER-000033 sell 0.025281 BTC/USDT @ 73756.07
+Opened short 0.025281 BTC/USDT @ 73756.07
+[PAPER] Executed short BTC/USDT @ 73756.07 qty=0.025281 slip=0.1445% comm=1.8646
+Closed short SOL/USDT @ 94.45 ù PnL: 12.51
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] SELL MARKET 19.375240 SOL/USDT @ 94.69 (slip=-0.09)
+ORDER FILLED: PAPER-000034 sell 19.375240 SOL/USDT @ 94.69
+Opened short 19.375240 SOL/USDT @ 94.69
+[PAPER] Executed short SOL/USDT @ 94.69 qty=19.375240 slip=0.0957% comm=1.8346
+Closed short BTC/USDT @ 74526.27 ù PnL: -19.47
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] SELL MARKET 0.024083 BTC/USDT @ 74482.64 (slip=-81.50)
+ORDER FILLED: PAPER-000035 sell 0.024083 BTC/USDT @ 74482.64
+Opened short 0.024083 BTC/USDT @ 74482.64
+[PAPER] Executed short BTC/USDT @ 74482.64 qty=0.024083 slip=0.1093% comm=1.7938
+Closed long ETH/USDT @ 2342.55 ù PnL: 12.38
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] SELL MARKET 0.822867 ETH/USDT @ 2341.09 (slip=-1.46)
+ORDER FILLED: PAPER-000036 sell 0.822867 ETH/USDT @ 2341.09
+Opened short 0.822867 ETH/USDT @ 2341.09
+[PAPER] Executed short ETH/USDT @ 2341.09 qty=0.822867 slip=0.0623% comm=1.9264
+
+Simulating:  83%|########2 | 404/488 [00:00<00:00, 1347.37it/s]Closed short SOL/USDT @ 94.03 ù PnL: 12.77
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] SELL MARKET 19.460336 SOL/USDT @ 94.29 (slip=-0.06)
+ORDER FILLED: PAPER-000037 sell 19.460336 SOL/USDT @ 94.29
+Opened short 19.460336 SOL/USDT @ 94.29
+[PAPER] Executed short SOL/USDT @ 94.29 qty=19.460336 slip=0.0652% comm=1.8349
+Closed short BTC/USDT @ 73866.30 ù PnL: 14.84
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] BUY MARKET 0.024998 BTC/USDT @ 73792.40 (slip=25.20)
+ORDER FILLED: PAPER-000038 buy 0.024998 BTC/USDT @ 73792.40
+Opened long 0.024998 BTC/USDT @ 73792.40
+[PAPER] Executed long BTC/USDT @ 73792.40 qty=0.024998 slip=0.0342% comm=1.8447
+Closed short ETH/USDT @ 2317.16 ù PnL: 19.69
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] SELL MARKET 0.762311 ETH/USDT @ 2313.41 (slip=-4.50)
+ORDER FILLED: PAPER-000039 sell 0.762311 ETH/USDT @ 2313.41
+Opened short 0.762311 ETH/USDT @ 2313.41
+[PAPER] Executed short ETH/USDT @ 2313.41 qty=0.762311 slip=0.1940% comm=1.7635
+Closed short SOL/USDT @ 94.33 ù PnL: -0.81
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] SELL MARKET 18.745480 SOL/USDT @ 94.20 (slip=-0.13)
+ORDER FILLED: PAPER-000040 sell 18.745480 SOL/USDT @ 94.20
+Opened short 18.745480 SOL/USDT @ 94.20
+[PAPER] Executed short SOL/USDT @ 94.20 qty=18.745480 slip=0.1385% comm=1.7658
+Closed long BTC/USDT @ 73164.54 ù PnL: -15.70
+[PAPER] BUY MARKET 0.762311 ETH/USDT @ 2276.86 (slip=0.51)
+ORDER FILLED: PAPER-000041 buy 0.762311 ETH/USDT @ 2276.86
+Closed short ETH/USDT @ 2276.86 ù PnL: 27.87
+[PAPER] BUY MARKET 18.745480 SOL/USDT @ 92.34 (slip=0.13)
+ORDER FILLED: PAPER-000042 buy 18.745480 SOL/USDT @ 92.34
+Closed short SOL/USDT @ 92.34 ù PnL: 34.78
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+Opened long 0.027488 BTC/USDT @ 72814.12
+[PAPER] Executed long BTC/USDT @ 72814.12 qty=0.027488 slip=0.0250% comm=2.0015
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] BUY MARKET 0.836888 ETH/USDT @ 2273.77 (slip=2.03)
+ORDER FILLED: PAPER-000044 buy 0.836888 ETH/USDT @ 2273.77
+Opened long 0.836888 ETH/USDT @ 2273.77
+[PAPER] Executed long ETH/USDT @ 2273.77 qty=0.836888 slip=0.0894% comm=1.9029
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] BUY MARKET 20.896674 SOL/USDT @ 92.23 (slip=0.16)
+ORDER FILLED: PAPER-000045 buy 20.896674 SOL/USDT @ 92.23
+Opened long 20.896674 SOL/USDT @ 92.23
+[PAPER] Executed long SOL/USDT @ 92.23 qty=20.896674 slip=0.1697% comm=1.9272
+Closed long ETH/USDT @ 2243.54 ù PnL: -25.30
+Closed long SOL/USDT @ 90.66 ù PnL: -32.73
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+[PAPER] BUY MARKET 21.030294 SOL/USDT @ 90.80 (slip=0.05)
+ORDER FILLED: PAPER-000046 buy 21.030294 SOL/USDT @ 90.80
+Opened long 21.030294 SOL/USDT @ 90.80
+[PAPER] Executed long SOL/USDT @ 90.80 qty=21.030294 slip=0.0521% comm=1.9095
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\abhin\AppData\Roaming\Python\Python314\site-packages\sklearn\utils\validation.py:2691: UserWarning: X does not have valid feature names, but LGBMClassifier was fitted with feature names
+  warnings.warn(
+
+Simulating: 100%|##########| 488/488 [00:00<00:00, 1246.00it/s]
+[BTC/USDT | 2026-03-16 20:15:00] PULLBACK LONG TRIGGERED | p=0.932 (raw=0.790, min=0.073, max=0.843) | current=73939.93 < ma9=73984.81
+[SOL/USDT | 2026-03-16 20:15:00] PULLBACK SHORT TRIGGERED | p=0.165 (raw=0.194, min=0.056, max=0.892) | current=95.53 > ma9=95.21
+[ETH/USDT | 2026-03-16 20:25:00] PULLBACK SHORT TRIGGERED | p=0.340 (raw=0.348, min=0.046, max=0.933) | current=2331.65 > ma9=2327.79
+[ETH/USDT | 2026-03-16 21:05:00] PULLBACK SHORT TRIGGERED | p=0.090 (raw=0.126, min=0.046, max=0.933) | current=2348.24 > ma9=2342.59
+[SOL/USDT | 2026-03-16 21:40:00] PULLBACK SHORT TRIGGERED | p=0.079 (raw=0.122, min=0.056, max=0.892) | current=96.36 > ma9=95.98
+[ETH/USDT | 2026-03-16 22:05:00] PULLBACK SHORT TRIGGERED | p=0.035 (raw=0.077, min=0.046, max=0.933) | current=2379.41 > ma9=2362.99
+[SOL/USDT | 2026-03-16 22:10:00] PULLBACK SHORT TRIGGERED | p=0.181 (raw=0.207, min=0.056, max=0.892) | current=97.27 > ma9=96.56
+[ETH/USDT | 2026-03-16 23:10:00] PULLBACK LONG TRIGGERED | p=0.773 (raw=0.732, min=0.046, max=0.933) | current=2334.73 < ma9=2354.22
+[SOL/USDT | 2026-03-16 23:10:00] PULLBACK LONG TRIGGERED | p=0.782 (raw=0.710, min=0.056, max=0.892) | current=95.63 < ma9=96.26
+[BTC/USDT | 2026-03-17 00:15:00] PULLBACK SHORT TRIGGERED | p=0.123 (raw=0.168, min=0.073, max=0.843) | current=75276.95 > ma9=74941.69
+[ETH/USDT | 2026-03-17 03:15:00] PULLBACK LONG TRIGGERED | p=0.677 (raw=0.647, min=0.046, max=0.933) | current=2342.44 < ma9=2353.12
+[SOL/USDT | 2026-03-17 03:15:00] PULLBACK LONG TRIGGERED | p=0.857 (raw=0.772, min=0.056, max=0.892) | current=94.79 < ma9=95.18
+[ETH/USDT | 2026-03-17 03:40:00] PULLBACK LONG TRIGGERED | p=0.930 (raw=0.871, min=0.046, max=0.933) | current=2318.94 < ma9=2336.99
+[SOL/USDT | 2026-03-17 04:00:00] PULLBACK LONG TRIGGERED | p=0.674 (raw=0.619, min=0.056, max=0.892) | current=93.93 < ma9=94.17
+[BTC/USDT | 2026-03-17 04:20:00] PULLBACK LONG TRIGGERED | p=0.974 (raw=0.823, min=0.073, max=0.843) | current=74409.00 < ma9=74502.81
+[ETH/USDT | 2026-03-17 07:45:00] PULLBACK LONG TRIGGERED | p=0.659 (raw=0.631, min=0.046, max=0.933) | current=2329.81 < ma9=2330.55
+[SOL/USDT | 2026-03-17 08:05:00] PULLBACK SHORT TRIGGERED | p=0.097 (raw=0.137, min=0.056, max=0.892) | current=94.58 > ma9=94.55
+[BTC/USDT | 2026-03-17 08:25:00] PULLBACK SHORT TRIGGERED | p=0.332 (raw=0.329, min=0.073, max=0.843) | current=74323.87 > ma9=74317.42
+[ETH/USDT | 2026-03-17 12:00:00] PULLBACK SHORT TRIGGERED | p=0.234 (raw=0.254, min=0.046, max=0.933) | current=2327.78 > ma9=2327.76
+[SOL/USDT | 2026-03-17 12:10:00] PULLBACK SHORT TRIGGERED | p=0.236 (raw=0.253, min=0.056, max=0.892) | current=93.99 > ma9=93.78
+[SOL/USDT | 2026-03-17 12:15:00] PULLBACK SHORT TRIGGERED | p=0.191 (raw=0.216, min=0.056, max=0.892) | current=93.99 > ma9=93.82
+[BTC/USDT | 2026-03-17 12:30:00] PULLBACK LONG TRIGGERED | p=0.748 (raw=0.649, min=0.073, max=0.843) | current=73804.74 < ma9=74008.84
+[SOL/USDT | 2026-03-17 13:05:00] PULLBACK SHORT TRIGGERED | p=0.213 (raw=0.234, min=0.056, max=0.892) | current=93.59 > ma9=93.52
+[SOL/USDT | 2026-03-17 13:50:00] PULLBACK LONG TRIGGERED | p=0.794 (raw=0.719, min=0.056, max=0.892) | current=93.70 < ma9=93.92
+[ETH/USDT | 2026-03-17 15:30:00] PULLBACK LONG TRIGGERED | p=0.875 (raw=0.822, min=0.046, max=0.933) | current=2319.49 < ma9=2333.79
+[BTC/USDT | 2026-03-17 16:40:00] PULLBACK SHORT TRIGGERED | p=0.116 (raw=0.163, min=0.073, max=0.843) | current=74156.89 > ma9=74129.21
+[SOL/USDT | 2026-03-17 17:55:00] PULLBACK LONG TRIGGERED | p=0.897 (raw=0.806, min=0.056, max=0.892) | current=94.38 < ma9=94.45
+[ETH/USDT | 2026-03-17 19:40:00] PULLBACK LONG TRIGGERED | p=0.613 (raw=0.590, min=0.046, max=0.933) | current=2334.71 < ma9=2335.54
+[BTC/USDT | 2026-03-17 20:45:00] PULLBACK SHORT TRIGGERED | p=0.181 (raw=0.213, min=0.073, max=0.843) | current=74575.39 > ma9=74546.92
+[SOL/USDT | 2026-03-17 22:00:00] PULLBACK SHORT TRIGGERED | p=0.142 (raw=0.174, min=0.056, max=0.892) | current=95.21 > ma9=95.20
+[ETH/USDT | 2026-03-17 23:45:00] PULLBACK LONG TRIGGERED | p=0.888 (raw=0.834, min=0.046, max=0.933) | current=2322.57 < ma9=2326.67
+[BTC/USDT | 2026-03-18 00:50:00] PULLBACK SHORT TRIGGERED | p=0.352 (raw=0.344, min=0.073, max=0.843) | current=73862.83 > ma9=73803.89
+[SOL/USDT | 2026-03-18 02:05:00] PULLBACK SHORT TRIGGERED | p=0.312 (raw=0.317, min=0.056, max=0.892) | current=94.78 > ma9=94.69
+[BTC/USDT | 2026-03-18 03:25:00] PULLBACK SHORT TRIGGERED | p=0.049 (raw=0.111, min=0.073, max=0.843) | current=74564.14 > ma9=74392.78
+[ETH/USDT | 2026-03-18 03:50:00] PULLBACK SHORT TRIGGERED | p=0.259 (raw=0.276, min=0.046, max=0.933) | current=2342.55 > ma9=2340.64
+[SOL/USDT | 2026-03-18 06:20:00] PULLBACK SHORT TRIGGERED | p=0.344 (raw=0.344, min=0.056, max=0.892) | current=94.35 > ma9=94.08
+[BTC/USDT | 2026-03-18 07:30:00] PULLBACK LONG TRIGGERED | p=0.887 (raw=0.756, min=0.073, max=0.843) | current=73767.20 < ma9=73923.62
+[ETH/USDT | 2026-03-18 07:55:00] PULLBACK SHORT TRIGGERED | p=0.303 (raw=0.315, min=0.046, max=0.933) | current=2317.91 > ma9=2317.25
+[SOL/USDT | 2026-03-18 10:25:00] PULLBACK SHORT TRIGGERED | p=0.091 (raw=0.132, min=0.056, max=0.892) | current=94.33 > ma9=94.29
+[BTC/USDT | 2026-03-18 11:35:00] PULLBACK LONG TRIGGERED | p=0.624 (raw=0.553, min=0.073, max=0.843) | current=72832.33 < ma9=73665.53
+[SOL/USDT | 2026-03-18 11:35:00] PULLBACK LONG TRIGGERED | p=0.694 (raw=0.636, min=0.056, max=0.892) | current=91.92 < ma9=93.42
+[SOL/USDT | 2026-03-18 11:40:00] PULLBACK LONG TRIGGERED | p=0.615 (raw=0.570, min=0.056, max=0.892) | current=91.92 < ma9=93.21
+[ETH/USDT | 2026-03-18 11:45:00] PULLBACK LONG TRIGGERED | p=0.654 (raw=0.627, min=0.046, max=0.933) | current=2271.74 < ma9=2293.01
+[SOL/USDT | 2026-03-18 11:45:00] PULLBACK LONG TRIGGERED | p=0.866 (raw=0.780, min=0.056, max=0.892) | current=92.07 < ma9=93.02
+[SOL/USDT | 2026-03-18 12:35:00] PULLBACK LONG TRIGGERED | p=0.784 (raw=0.711, min=0.056, max=0.892) | current=90.75 < ma9=91.53
+
+============================================================
+PROFITABILITY ANALYSIS
+============================================================
+Total Return             : 0.03%
+Sharpe Ratio             : 2.97
+Max Drawdown             : 0.12%
+Win Rate                 : 51.3% (20/39)
+Profit Factor            : 0.56
+Expectancy per Trade     : $-4.31
+
+Exit Reasons Breakdown:
+  stop_loss: 11
+  tp_1_partial: 5
+  time_exit: 23
+
+Is this strategy profitable after costs?
+-> YES. Profitable with strict 10bps costs and 2% risk limits.
+============================================================
+Traceback (most recent call last):
+  File "C:\Users\abhin\Music\vision.ai\scripts\run_backtest.py", line 448, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\abhin\Music\vision.ai\scripts\run_backtest.py", line 444, in main
+    print("\n[\u2714] Performance charts saved: equity_curve.png, drawdown_curve.png")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2714' in position 3: character maps to <undefined>
