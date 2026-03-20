@@ -13,7 +13,7 @@ from typing import Any, Awaitable, Callable, Dict, Optional
 from backend.src.core.cache import RedisCache
 from backend.src.core.config import settings
 from backend.src.data.fetcher import DataFetcher
-from backend.src.database.db import get_connection
+from backend.src.database.db import get_connection, release_connection
 from backend.src.exchange.exchange_adapter import ExchangeAdapter, PaperAdapter
 from backend.src.execution.execution_engine import ExecutionEngine
 from backend.src.features.indicators import FeatureEngineer
@@ -57,7 +57,7 @@ def _persist_signal(signal: Dict):
 
         conn.commit()
         cur.close()
-        conn.close()
+        release_connection(conn)
 
     except Exception as e:
         if "DATABASE_URL" in str(e):
@@ -81,7 +81,7 @@ def _persist_equity(cash: float, equity: float, positions_value: float = 0):
 
         conn.commit()
         cur.close()
-        conn.close()
+        release_connection(conn)
 
     except Exception as e:
         if "DATABASE_URL" in str(e):
@@ -116,7 +116,7 @@ def _persist_portfolio_snapshot(perf: Dict, portfolio: Dict):
 
         conn.commit()
         cur.close()
-        conn.close()
+        release_connection(conn)
 
     except Exception as e:
         if "DATABASE_URL" in str(e):

@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from backend.src.auth.auth_service import require_admin
-from backend.src.database.db import get_connection
+from backend.src.database.db import get_connection, release_connection
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ async def list_users(admin: dict = Depends(require_admin)):
             "SELECT id, email, role, is_active, created_at FROM users ORDER BY id"
         )
         rows = cursor.fetchall()
-        conn.close()
+        release_connection(conn)
 
         users = []
         for row in rows:
@@ -119,12 +119,12 @@ async def disable_user(
         user = cursor.fetchone()
 
         if not user:
-            conn.close()
+            release_connection(conn)
             raise HTTPException(404, "User not found")
 
         cursor.execute("UPDATE users SET is_active=0 WHERE id=%s", (req.user_id,))
         conn.commit()
-        conn.close()
+        release_connection(conn)
 
         logger.info("Admin {admin.get('user_id')} disabled user {req.user_id}: %s", req.reason)
 

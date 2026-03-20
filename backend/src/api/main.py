@@ -63,6 +63,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from backend.src.api.admin_routes import router as admin_router
 from backend.src.api.auth_routes import router as auth_router
+from backend.src.database.db import init_db, ConnectionPoolManager, get_connection, release_connection
 from backend.src.auth.auth_service import get_current_user
 # Lightweight imports only — these don't trigger heavy computation
 from backend.src.core.config import settings
@@ -147,9 +148,11 @@ async def lifespan(app: FastAPI):
     try:
         settings.validate_security()
 
-        # ---- Database ----
-        from backend.src.database.db import init_db
+        # ---- Database Pool ----
+        ConnectionPoolManager.get_instance().initialize()
+        logger.info("Database connection pool initialized")
 
+        # ---- Database ----
         try:
             init_db()
             logger.info("Database initialized")
@@ -329,6 +332,28 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class AddSecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        # Security headers
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "img-src 'self' data: https://static.tradingview.com; "
+            "connect-src 'self' ws: wss: https://api.binance.com https://api.coingecko.com; "
+            "frame-src 'self' https://s.tradingview.com;"
+        )
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        return response
+
+
+app.add_middleware(AddSecurityHeadersMiddleware)
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(RateLimiterMiddleware, max_requests=60, window_seconds=60)
 
@@ -1557,7 +1582,7 @@ async def order_history(request: Request, limit: int = 50):
         cur = conn.cursor()
         cur.execute("SELECT * FROM trades ORDER BY timestamp DESC LIMIT %s", (limit,))
         rows = cur.fetchall()
-        conn.close()
+        release_connection(conn)
         if rows:
             orders = [
                 {

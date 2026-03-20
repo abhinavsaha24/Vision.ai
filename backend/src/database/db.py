@@ -1,6 +1,9 @@
 import logging
 import os
 from pathlib import Path
+from typing import Optional
+
+from psycopg2 import pool
 
 logger = logging.getLogger("vision-ai")
 
@@ -21,30 +24,65 @@ def is_postgres_connection(conn) -> bool:
 
 
 # --------------------------------------------------
-# Database connection
+# Database connection pool manager
 # --------------------------------------------------
 
 
-def get_connection():
-    """
-    Returns a PostgreSQL database connection.
-    Uses DATABASE_URL environment variable with proper parsing.
-    """
-    database_url = (os.getenv("DATABASE_URL") or "").strip()
+class ConnectionPoolManager:
+    """Singleton manager for the PostgreSQL connection pool."""
 
-    if not database_url or "postgres" not in database_url.lower():
-        raise RuntimeError("DATABASE_URL must be set to a PostgreSQL connection string")
+    _instance: Optional["ConnectionPoolManager"] = None
+    _pool: Optional[pool.ThreadedConnectionPool] = None
 
-    try:
-        import psycopg2
+    @classmethod
+    def get_instance(cls) -> "ConnectionPoolManager":
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
 
+    def initialize(self) -> None:
+        """Initialize the pool if not already created."""
+        if self._pool is not None:
+            return
+
+        try:
+            from backend.src.database.connection_utils import \
+                get_database_connection_params
+            params = get_database_connection_params()
+
+            self._pool = pool.ThreadedConnectionPool(
+                minconn=1,
+                maxconn=20,
+                host=params["host"],
+                port=params["port"],
+                database=params["database"],
+                user=params["user"],
+                password=params["password"],
+                connect_timeout=5,
+            )
+            logger.info("Database connection pool initialized [OK]")
+        except Exception as e:
+            logger.error("Failed to initialize database connection pool: %s", e)
+            # We don't raise here — fallback to raw connections will happen in get_conn
+            pass
+
+    def get_conn(self):
+        """Get a connection from the pool, or create a raw one if pool fails."""
+        if self._pool is None:
+            self.initialize()
+
+        if self._pool:
+            try:
+                return self._pool.getconn()
+            except Exception as e:
+                logger.warning("Pool exhausted or failed: %s. Falling back to raw connection.", e)
+
+        # Fallback to a single raw connection if pool isn't available
         from backend.src.database.connection_utils import \
             get_database_connection_params
-
-        # Use our fixed connection parameter parser
         params = get_database_connection_params()
-
-        conn = psycopg2.connect(
+        import psycopg2
+        return psycopg2.connect(
             host=params["host"],
             port=params["port"],
             database=params["database"],
@@ -52,11 +90,47 @@ def get_connection():
             password=params["password"],
             connect_timeout=5,
         )
-        return conn
-    except ImportError as e:
-        raise RuntimeError("psycopg2 is required for PostgreSQL runtime") from e
-    except Exception as e:
-        raise RuntimeError(f"PostgreSQL connection failed: {e}") from e
+
+    def put_conn(self, conn) -> None:
+        """Return a connection to the pool."""
+        if self._pool and hasattr(conn, "__class__") and "psycopg2" in conn.__class__.__module__:
+            try:
+                # Only put back if it came from the pool
+                self._pool.putconn(conn)
+            except Exception as e:
+                logger.warning("Failed to return connection to pool: %s", e)
+                try:
+                    conn.close()
+                except:
+                    pass
+        else:
+            # If not a pool connection, just close it
+            try:
+                conn.close()
+            except:
+                pass
+
+    def close_all(self) -> None:
+        """Close all connections in the pool."""
+        if self._pool:
+            self._pool.closeall()
+            self._pool = None
+            logger.info("Database connection pool closed")
+
+
+def get_connection():
+    """
+    Returns a database connection from the pool.
+    """
+    return ConnectionPoolManager.get_instance().get_conn()
+
+
+def release_connection(conn):
+    """
+    Returns a connection to the pool. Use this instead of conn.close()
+    for connections obtained via get_connection().
+    """
+    ConnectionPoolManager.get_instance().put_conn(conn)
 
 
 # --------------------------------------------------

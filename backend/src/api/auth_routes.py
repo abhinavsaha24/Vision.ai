@@ -15,7 +15,7 @@ from pydantic import BaseModel, EmailStr
 from backend.src.auth.auth_service import (create_access_token,
                                            get_current_user, hash_password,
                                            verify_password)
-from backend.src.database.db import get_connection
+from backend.src.database.db import get_connection, release_connection
 
 router = APIRouter()
 
@@ -55,7 +55,7 @@ def _do_signup(req: SignupRequest):
     existing = cursor.fetchone()
 
     if existing:
-        conn.close()
+        release_connection(conn)
         raise HTTPException(status_code=400, detail="User already exists")
 
     hashed = hash_password(req.password)
@@ -66,7 +66,7 @@ def _do_signup(req: SignupRequest):
     )
 
     conn.commit()
-    conn.close()
+    release_connection(conn)
 
     return {"status": "user created"}
 
@@ -96,7 +96,7 @@ def login(req: LoginRequest):
         (req.email,),
     )
     user = cursor.fetchone()
-    conn.close()
+    release_connection(conn)
 
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -141,7 +141,7 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         (current_user.get("user_id"),),
     )
     user = cursor.fetchone()
-    conn.close()
+    release_connection(conn)
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

@@ -18,6 +18,7 @@ from __future__ import annotations
 import logging
 import time
 from typing import Dict, List, Optional
+from backend.src.database.db import get_connection, release_connection
 
 logger = logging.getLogger("vision-ai.state")
 
@@ -77,8 +78,6 @@ class StateManager:
     def _persist_portfolio_to_db(self, data: Dict):
         """Write portfolio snapshot to database."""
         try:
-            from backend.src.database.db import get_connection
-
             conn = get_connection()
             cur = conn.cursor()
             cur.execute(
@@ -98,7 +97,7 @@ class StateManager:
                 ),
             )
             conn.commit()
-            conn.close()
+            release_connection(conn)
             logger.debug("Portfolio state persisted to database")
         except Exception as e:
             logger.warning("Portfolio DB persist failed: %s", e)
@@ -106,15 +105,13 @@ class StateManager:
     def _load_portfolio_from_db(self) -> Optional[Dict]:
         """Load most recent portfolio snapshot from database."""
         try:
-            from backend.src.database.db import get_connection
-
             conn = get_connection()
             cur = conn.cursor()
             cur.execute(
                 "SELECT * FROM portfolio_snapshots ORDER BY created_at DESC LIMIT 1"
             )
             row = cur.fetchone()
-            conn.close()
+            release_connection(conn)
 
             if row:
                 logger.info("Portfolio state restored from database")
@@ -169,8 +166,6 @@ class StateManager:
     def save_trade(self, trade: Dict) -> bool:
         """Persist a trade to the database."""
         try:
-            from backend.src.database.db import get_connection
-
             conn = get_connection()
             cur = conn.cursor()
             cur.execute(
@@ -186,7 +181,7 @@ class StateManager:
                 ),
             )
             conn.commit()
-            conn.close()
+            release_connection(conn)
             return True
         except Exception as e:
             logger.warning("Trade persist failed: %s", e)
@@ -195,15 +190,13 @@ class StateManager:
     def get_trade_history(self, limit: int = 100) -> List[Dict]:
         """Load recent trade history from database."""
         try:
-            from backend.src.database.db import get_connection
-
             conn = get_connection()
             cur = conn.cursor()
             cur.execute(
                 "SELECT * FROM trades ORDER BY timestamp DESC LIMIT %s", (limit,)
             )
             rows = cur.fetchall()
-            conn.close()
+            release_connection(conn)
             return [
                 {
                     "id": r[0],
@@ -228,8 +221,6 @@ class StateManager:
     def save_signal(self, signal: Dict) -> bool:
         """Persist a signal to the database."""
         try:
-            from backend.src.database.db import get_connection
-
             conn = get_connection()
             cur = conn.cursor()
             cur.execute(
@@ -247,7 +238,7 @@ class StateManager:
                 ),
             )
             conn.commit()
-            conn.close()
+            release_connection(conn)
             return True
         except Exception as e:
             logger.warning("Signal persist failed: %s", e)
