@@ -5,9 +5,11 @@ Trading loop: autonomous trading cycle supporting both paper and live modes.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, Optional
 
 from backend.src.core.cache import RedisCache
@@ -20,6 +22,8 @@ from backend.src.features.indicators import FeatureEngineer
 from backend.src.models.predictor import Predictor
 from backend.src.models.regime_detector import MarketRegimeDetector
 from backend.src.models.meta_alpha_engine import MetaAlphaEngine
+from backend.src.monitoring.shadow_live_tracker import ShadowLiveTracker
+from backend.src.portfolio.edge_portfolio_allocator import EdgePortfolioAllocator
 from backend.src.portfolio.portfolio_manager import PortfolioManager
 from backend.src.risk.risk_manager import RiskManager
 from backend.src.strategy.strategy_engine import StrategyEngine
@@ -34,6 +38,8 @@ logging.basicConfig(level=logging.INFO)
 
 
 def _persist_signal(signal: Dict):
+    conn = None
+    cur = None
     try:
         conn = get_connection()
         cur = conn.cursor()
@@ -56,17 +62,22 @@ def _persist_signal(signal: Dict):
         )
 
         conn.commit()
-        cur.close()
-        release_connection(conn)
 
     except Exception as e:
         if "DATABASE_URL" in str(e):
             logger.debug("Signal persistence skipped: %s", e)
             return
         logger.error("Signal persistence error: %s", e)
+    finally:
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            release_connection(conn)
 
 
 def _persist_equity(cash: float, equity: float, positions_value: float = 0):
+    conn = None
+    cur = None
     try:
         conn = get_connection()
         cur = conn.cursor()
@@ -80,17 +91,22 @@ def _persist_equity(cash: float, equity: float, positions_value: float = 0):
         )
 
         conn.commit()
-        cur.close()
-        release_connection(conn)
 
     except Exception as e:
         if "DATABASE_URL" in str(e):
             logger.debug("Equity persistence skipped: %s", e)
             return
         logger.warning("Equity persist failed: %s", e)
+    finally:
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            release_connection(conn)
 
 
 def _persist_portfolio_snapshot(perf: Dict, portfolio: Dict):
+    conn = None
+    cur = None
     try:
         conn = get_connection()
         cur = conn.cursor()
@@ -115,14 +131,17 @@ def _persist_portfolio_snapshot(perf: Dict, portfolio: Dict):
         )
 
         conn.commit()
-        cur.close()
-        release_connection(conn)
 
     except Exception as e:
         if "DATABASE_URL" in str(e):
             logger.debug("Portfolio snapshot persistence skipped: %s", e)
             return
         logger.warning("Portfolio snapshot persist failed: %s", e)
+    finally:
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            release_connection(conn)
 
 
 # -------------------------------------------------------
@@ -186,9 +205,14 @@ class TradingLoop:
         self.max_symbol_concurrency = 4
         self.symbol_timeout_seconds = 30.0
         self.max_retries = 3
+        self.shadow_tracker = ShadowLiveTracker(window_days=14)
+        self.edge_allocator = EdgePortfolioAllocator()
+        self._latest_edge_candidates: dict[str, Dict[str, Any]] = {}
+        self._last_trade_count = 0
         self.base_retry_delay_seconds = 0.5
         self.total_errors = 0
         self.last_error: Optional[str] = None
+        self._artifacts_dir = Path("data")
 
         try:
             self.predictor = Predictor()
@@ -266,7 +290,7 @@ class TradingLoop:
             )
 
             df = await asyncio.to_thread(self.engineer.add_all_indicators, df)
-            df = await asyncio.to_thread(df.dropna)
+            df = df.dropna()
 
             if len(df) < 50:
                 return
@@ -306,6 +330,28 @@ class TradingLoop:
             prediction["signal"] = meta_alpha.get("signal", "HOLD")
             prediction["confidence"] = float(meta_alpha.get("confidence", prediction.get("confidence", 0.5)) or 0.5)
 
+            decision = str(meta_alpha.get("decision", "none")).lower()
+            flow_alignment = str(meta_alpha.get("flow_alignment", "neutral")).lower()
+            if flow_alignment == "conflict":
+                prediction["signal"] = "HOLD"
+                decision = "none"
+
+            edge_id = f"meta|{str(regime.get('market_state', 'UNKNOWN')).lower()}|{decision}"
+            self._latest_edge_candidates[symbol] = {
+                "edge_id": edge_id,
+                "event_definition": "meta_signal",
+                "direction": "long" if decision == "long" else ("short" if decision == "short" else "neutral"),
+                "confidence_score": float(meta_alpha.get("confidence", 0.0) or 0.0),
+                "sample_size": 120.0,
+                "in_sample_metrics": {
+                    "t_stat": float(meta_alpha.get("confidence", 0.0) or 0.0) * 2.0,
+                    "samples": 120.0,
+                },
+                "asset_coverage": [symbol],
+            }
+
+            allocation_multiplier = self._allocation_multiplier(symbol, decision)
+
             async def process_market_data():
                 return await asyncio.to_thread(
                     self.execution.process_market_data,
@@ -315,6 +361,7 @@ class TradingLoop:
                     price,
                     regime,
                     market_snapshot,
+                    allocation_multiplier,
                 )
 
             result = await self._retry_async(
@@ -382,12 +429,17 @@ class TradingLoop:
                 _persist_portfolio_snapshot, performance, portfolio_state
             )
 
+            self._update_shadow_state()
+            shadow_snapshot = self.shadow_tracker.snapshot()
+            await asyncio.to_thread(self._cache.set_json, "shadow:performance", shadow_snapshot, 600)
+            await asyncio.to_thread(self._persist_operational_snapshots, shadow_snapshot)
+
             logger.info("Symbol: %s | Price: %.2f | Signal: %s | Equity: %.2f", symbol, price, result.get("status"), equity_val)
 
         except Exception as e:
             self.total_errors += 1
             self.last_error = f"{symbol}: {e}"
-            logger.error("Trading cycle error for {symbol}: %s", e)
+            logger.error("Trading cycle error for %s: %s", symbol, e)
 
     def _publish_heartbeat(self, cycle_time: str):
         self._cache.set_json(
@@ -459,7 +511,78 @@ class TradingLoop:
             "last_error": self.last_error,
             "portfolio": self.portfolio.get_portfolio(),
             "performance": self.portfolio.get_performance(),
+            "shadow_performance": self.shadow_tracker.snapshot(),
+            "allocator": self.edge_allocator.allocate(list(self._latest_edge_candidates.values())),
         }
+
+    def _allocation_multiplier(self, symbol: str, decision: str) -> float:
+        candidates = list(self._latest_edge_candidates.values())
+        if not candidates:
+            return 1.0
+        allocation = self.edge_allocator.allocate(candidates)
+        target = float((allocation.get("positions", {}) or {}).get(symbol, 0.0))
+        if decision == "none":
+            return 0.0
+        if decision == "long" and target <= 0.0:
+            return 0.0
+        if decision == "short" and target >= 0.0:
+            return 0.0
+        return float(min(1.0, abs(target) / 0.30))
+
+    def _update_shadow_state(self) -> None:
+        trades = self.portfolio.trade_history
+        if len(trades) <= self._last_trade_count:
+            return
+        for trade in trades[self._last_trade_count :]:
+            meta = trade.get("metadata", {}) or {}
+            edge_id = str(meta.get("selected_edge", trade.get("strategy_name", "unknown")))
+            entry_price = float(trade.get("entry_price", 0.0) or 0.0)
+            pnl = float(trade.get("pnl", 0.0) or 0.0)
+            pnl_ret = 0.0 if entry_price <= 0.0 else pnl / max(entry_price * float(trade.get("quantity", 1.0) or 1.0), 1e-9)
+            self.shadow_tracker.add_trade(
+                symbol=str(trade.get("symbol", "")),
+                edge_id=edge_id,
+                pnl=pnl_ret,
+                timestamp=str(trade.get("exit_time", datetime.now(timezone.utc).isoformat())),
+            )
+            if hasattr(self.meta_alpha, "edge_registry") and getattr(self.meta_alpha, "edge_registry", None) is not None:
+                try:
+                    self.meta_alpha.edge_registry.update_decay(edge_id, pnl_ret)
+                except Exception as exc:
+                    logger.debug(
+                        "edge_decay_update_failed edge_id=%s pnl_ret=%s err=%s",
+                        edge_id,
+                        pnl_ret,
+                        exc,
+                        exc_info=True,
+                    )
+        self._last_trade_count = len(trades)
+
+    def _persist_operational_snapshots(self, shadow_snapshot: Dict[str, Any]) -> None:
+        self._artifacts_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            allocator_snapshot = self.edge_allocator.allocate(list(self._latest_edge_candidates.values()))
+            (self._artifacts_dir / "shadow_performance.json").write_text(
+                json.dumps(shadow_snapshot, indent=2),
+                encoding="utf-8",
+            )
+            (self._artifacts_dir / "allocator_snapshot.json").write_text(
+                json.dumps(allocator_snapshot, indent=2),
+                encoding="utf-8",
+            )
+
+            edge_registry = getattr(self.meta_alpha, "edge_registry", None)
+            if edge_registry is not None:
+                lifecycle_payload = {
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                    "lifecycle": edge_registry.lifecycle_summary(),
+                }
+                (self._artifacts_dir / "edge_lifecycle.json").write_text(
+                    json.dumps(lifecycle_payload, indent=2),
+                    encoding="utf-8",
+                )
+        except Exception as exc:
+            logger.error("Operational snapshot persistence failed: %s", exc, exc_info=True)
 
 
 # -------------------------------------------------------

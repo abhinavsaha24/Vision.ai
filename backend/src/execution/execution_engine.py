@@ -189,6 +189,7 @@ class ExecutionEngine:
         price: float,
         regime: Optional[Dict] = None,
         market_snapshot: Optional[Dict] = None,
+        allocation_multiplier: float = 1.0,
     ) -> Dict:
         """
         Full execution pipeline: signal → risk check → execute.
@@ -305,6 +306,15 @@ class ExecutionEngine:
                 current_drawdown=portfolio.get("max_drawdown", 0.0)
             )
             trade_value = position_qty * price
+            original_allocation_multiplier = float(allocation_multiplier)
+            clamped_allocation_multiplier = max(0.0, min(1.0, original_allocation_multiplier))
+            if clamped_allocation_multiplier != original_allocation_multiplier:
+                logger.warning(
+                    "allocation_multiplier_out_of_range original=%s clamped=%s",
+                    original_allocation_multiplier,
+                    clamped_allocation_multiplier,
+                )
+            trade_value *= clamped_allocation_multiplier
 
             if trade_value <= 0:
                 self.circuit_breaker.record_failure("no_capital")
@@ -390,6 +400,8 @@ class ExecutionEngine:
                             if isinstance(regime, dict)
                             else "default"
                         ),
+                        "selected_edge": str((prediction.get("meta_alpha") or {}).get("selected_edge", "meta_signal")),
+                        "registry_version": str((prediction.get("meta_alpha") or {}).get("registry_version", "runtime")),
                     },
                 )
 

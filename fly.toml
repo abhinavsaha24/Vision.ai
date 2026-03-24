@@ -1,0 +1,33 @@
+app = "vision-ai-quant"
+primary_region = "iad"
+
+[build]
+  dockerfile = "deployment/Dockerfile.quant"
+
+[env]
+  LOG_LEVEL = "INFO"
+
+[processes]
+  api = "uvicorn backend.src.platform.api_service:app --host 0.0.0.0 --port 8080"
+  trading = "python -m backend.src.platform.workers.trading_engine"
+  risk = "python -m backend.src.platform.workers.risk_engine"
+  execution = "python -m backend.src.platform.workers.execution_engine"
+
+[[services]]
+  processes = ["api"]
+  internal_port = 8080
+  protocol = "tcp"
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
+
+  [[services.http_checks]]
+    interval = "15s"
+    timeout = "2s"
+    method = "get"
+    path = "/health"

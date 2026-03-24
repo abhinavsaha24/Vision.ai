@@ -4,15 +4,26 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.pytest_cache/
+
+# local virtualenvs
+.venv/
 
 # environment variables
 .env
 
 # logs
 /logs/
+*.log
 
 # data (root cache only, not backend/src/data/)
 /data/
+/registry/versions/
+/backtest_result/
+alpha_*.json
+alpha_*.log
+alpha_*.txt
+*_curve.png
 
 # frontend
 node_modules/

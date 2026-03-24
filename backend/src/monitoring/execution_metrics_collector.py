@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 from collections import deque
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict
 
 logger = logging.getLogger(__name__)
@@ -57,14 +57,14 @@ class ExecutionMetricsCollector:
         """
         self.metrics_history.append(
             {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "latency_ms": float(order_result.get("latency_ms", 0.0)),
                 "slippage_bps": float(order_result.get("slippage_bps", 0.0)),
                 "status": order_result.get("status", "UNKNOWN"),
                 "symbol": order_result.get("symbol", ""),
             }
         )
-        self.last_update = datetime.utcnow()
+        self.last_update = datetime.now(timezone.utc)
         self.total_orders += 1
 
     def update_from_order_manager(self, order_manager) -> bool:
@@ -84,7 +84,7 @@ class ExecutionMetricsCollector:
 
             self.metrics_history.append(
                 {
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                     "avg_latency_ms": float(stats.get("avg_latency_ms", 0.0)),
                     "avg_slippage_bps": float(stats.get("avg_slippage_bps", 0.0)),
                     "median_latency_ms": float(stats.get("median_latency_ms", 0.0)),
@@ -96,7 +96,7 @@ class ExecutionMetricsCollector:
                     "total_filled": int(stats.get("total_filled", 0)),
                 }
             )
-            self.last_update = datetime.utcnow()
+            self.last_update = datetime.now(timezone.utc)
 
             return True
         except Exception as e:

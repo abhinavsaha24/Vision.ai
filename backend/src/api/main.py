@@ -250,27 +250,30 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.warning("Predictor not available: %s", e)
 
-        # ---- Auto-start Paper Trading ----
-        try:
-            from backend.src.workers.trading_loop import TradingLoop
+        # ---- Auto-start Paper Trading (disabled by default for stateless API) ----
+        if settings.paper_trading_api_autostart:
+            try:
+                from backend.src.workers.trading_loop import TradingLoop
 
-            svc.paper_trader = TradingLoop(
-                symbol=settings.default_symbol.replace("/", ""),
-                initial_cash=settings.paper_trading_initial_cash,
-                metrics_collector=svc.execution_metrics_collector,
-            )
-            svc.paper_trader.interval_seconds = settings.paper_trading_interval
-            svc.worker_manager.register(
-                "paper_trading", svc.paper_trader,
-                auto_restart=True, max_restarts=10,
-            )
-            await svc.worker_manager.start_worker("paper_trading")
-            logger.info(
-                "Paper trading auto-started for %s (interval=%ds)",
-                settings.default_symbol, settings.paper_trading_interval,
-            )
-        except Exception as e:
-            logger.warning("Paper trading auto-start failed: %s", e)
+                svc.paper_trader = TradingLoop(
+                    symbol=settings.default_symbol.replace("/", ""),
+                    initial_cash=settings.paper_trading_initial_cash,
+                    metrics_collector=svc.execution_metrics_collector,
+                )
+                svc.paper_trader.interval_seconds = settings.paper_trading_interval
+                svc.worker_manager.register(
+                    "paper_trading", svc.paper_trader,
+                    auto_restart=True, max_restarts=10,
+                )
+                await svc.worker_manager.start_worker("paper_trading")
+                logger.info(
+                    "Paper trading auto-started for %s (interval=%ds)",
+                    settings.default_symbol, settings.paper_trading_interval,
+                )
+            except Exception as e:
+                logger.warning("Paper trading auto-start failed: %s", e)
+        else:
+            logger.info("Paper trading auto-start disabled; run trading as a separate worker service")
 
         svc.initialized = True
         app.state.services = svc
@@ -340,9 +343,10 @@ class AddSecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
+        # Keep CSP strict: no global unsafe-eval/unsafe-inline for scripts.
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net; "
+            "script-src 'self' https://unpkg.com https://cdn.jsdelivr.net; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; "
             "img-src 'self' data: https://static.tradingview.com; "
@@ -382,7 +386,7 @@ for origin in default_origins:
         cors_allowed_origins.append(origin)
 
 raw_cors_regex = str(getattr(settings, "cors_allow_origin_regex", "") or "").strip()
-cors_allow_origin_regex = raw_cors_regex or r"https://.*\.vercel\.app"
+cors_allow_origin_regex = raw_cors_regex or r"https://visiontrading.*\.vercel\.app"
 
 app.add_middleware(
     CORSMiddleware,
@@ -406,7 +410,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={
             "error": "Internal server error",
-            "detail": str(exc),
+            "message": "An internal server error occurred",
             "fallback": True,
         },
     )
@@ -1457,6 +1461,10 @@ async def manual_buy(request: Request, body: ManualTradeRequest):
     svc = _svc(request)
     if not svc.paper_trader:
         raise HTTPException(status_code=400, detail="Paper trading not active")
+    execution = getattr(svc.paper_trader, "execution", None)
+    order_manager = getattr(execution, "order_manager", None) if execution is not None else None
+    if execution is None or order_manager is None:
+        raise HTTPException(status_code=400, detail="Trading execution not available")
         
     try:
         df = svc.fetcher.fetch(body.symbol)
@@ -1466,7 +1474,7 @@ async def manual_buy(request: Request, body: ManualTradeRequest):
         price = float(df["close"].iloc[-1])
         quantity = body.size_usd / price
         
-        order = svc.paper_trader.execution.order_manager.submit_market_order(
+        order = order_manager.submit_market_order(
             symbol=body.symbol, side="buy", quantity=quantity, price=price
         )
         
@@ -1482,9 +1490,11 @@ async def manual_buy(request: Request, body: ManualTradeRequest):
             return {"status": "success", "message": "Buy order executed", "order": order.__dict__}
         else:
             raise HTTPException(status_code=400, detail=f"Order rejected: {order.error}")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Error executing manual buy: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Manual buy failed")
 
 
 @app.post("/trading/sell", dependencies=[Depends(get_current_user)])
@@ -1493,6 +1503,10 @@ async def manual_sell(request: Request, body: ManualTradeRequest):
     svc = _svc(request)
     if not svc.paper_trader:
         raise HTTPException(status_code=400, detail="Paper trading not active")
+    execution = getattr(svc.paper_trader, "execution", None)
+    order_manager = getattr(execution, "order_manager", None) if execution is not None else None
+    if execution is None or order_manager is None:
+        raise HTTPException(status_code=400, detail="Trading execution not available")
         
     try:
         df = svc.fetcher.fetch(body.symbol)
@@ -1502,7 +1516,7 @@ async def manual_sell(request: Request, body: ManualTradeRequest):
         price = float(df["close"].iloc[-1])
         quantity = body.size_usd / price
         
-        order = svc.paper_trader.execution.order_manager.submit_market_order(
+        order = order_manager.submit_market_order(
             symbol=body.symbol, side="sell", quantity=quantity, price=price
         )
         
@@ -1518,9 +1532,11 @@ async def manual_sell(request: Request, body: ManualTradeRequest):
             return {"status": "success", "message": "Sell order executed", "order": order.__dict__}
         else:
             raise HTTPException(status_code=400, detail=f"Order rejected: {order.error}")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Error executing manual sell: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Manual sell failed")
 
 
 @app.post("/trading/close", dependencies=[Depends(get_current_user)])
@@ -1529,6 +1545,10 @@ async def manual_close(request: Request, body: ClosePositionRequest):
     svc = _svc(request)
     if not svc.paper_trader:
         raise HTTPException(status_code=400, detail="Paper trading not active")
+    execution = getattr(svc.paper_trader, "execution", None)
+    order_manager = getattr(execution, "order_manager", None) if execution is not None else None
+    if execution is None or order_manager is None:
+        raise HTTPException(status_code=400, detail="Trading execution not available")
         
     positions = svc.portfolio_manager.get_portfolio().get("positions", {})
     position = positions.get(body.symbol)
@@ -1544,7 +1564,7 @@ async def manual_close(request: Request, body: ClosePositionRequest):
         quantity = position["quantity"]
         close_side = "sell" if position["side"] == "long" else "buy"
         
-        order = svc.paper_trader.execution.order_manager.submit_market_order(
+        order = order_manager.submit_market_order(
             symbol=body.symbol, side=close_side, quantity=quantity, price=price
         )
         
@@ -1553,9 +1573,11 @@ async def manual_close(request: Request, body: ClosePositionRequest):
             return {"status": "success", "message": "Position closed", "order": order.__dict__}
         else:
             raise HTTPException(status_code=400, detail=f"Order rejected: {order.error}")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Error executing manual close: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Manual close failed")
 
 
 # ==================================================
@@ -1579,10 +1601,15 @@ async def order_history(request: Request, limit: int = 50):
         from backend.src.database.db import get_connection
 
         conn = get_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM trades ORDER BY timestamp DESC LIMIT %s", (limit,))
-        rows = cur.fetchall()
-        release_connection(conn)
+        cur = None
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM trades ORDER BY timestamp DESC LIMIT %s", (limit,))
+            rows = cur.fetchall()
+        finally:
+            if cur is not None:
+                cur.close()
+            release_connection(conn)
         if rows:
             orders = [
                 {

@@ -137,10 +137,13 @@ class StatisticalArbitrage:
         b = series_b.values
         a = series_a.values
 
+        if len(a) < 2 or len(b) < 2:
+            return 1.0
+
         # OLS: a = beta * b + alpha + epsilon
         # beta = cov(a, b) / var(b)
         cov = np.cov(a, b)
-        if cov[1, 1] == 0:
+        if not np.isfinite(cov[1, 1]) or abs(cov[1, 1]) <= 1e-12:
             return 1.0
         return float(cov[0, 1] / cov[1, 1])
 
@@ -181,6 +184,8 @@ class StatisticalArbitrage:
 
         # Align
         min_len = min(len(spread_lag), len(delta))
+        if min_len < 2:
+            return float("inf")
         spread_lag = spread_lag.iloc[-min_len:]
         delta = delta.iloc[-min_len:]
 
@@ -188,10 +193,12 @@ class StatisticalArbitrage:
         x = spread_lag.values
         y = delta.values
 
-        if np.var(x) == 0:
+        cov = np.cov(x, y, ddof=1)
+        var_x = cov[0, 0]
+        if not np.isfinite(var_x) or var_x <= 1e-12:
             return float("inf")
 
-        theta = np.cov(x, y)[0, 1] / np.var(x)
+        theta = cov[0, 1] / var_x
 
         if theta >= 0:
             return float("inf")  # Not mean-reverting

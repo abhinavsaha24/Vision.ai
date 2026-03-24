@@ -1,312 +1,258 @@
-"""Institutional meta-alpha engine for weighted multi-signal aggregation."""
+"""Regime-aware meta-alpha engine with calibrated confidence."""
 
 from __future__ import annotations
 
 import math
 from collections import deque
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class MetaAlphaEngine:
-    """Combines model, microstructure, volatility, and optional sentiment into alpha."""
-
-    def __init__(self):
-        self.base_weights = {
-            "model_probability": 0.35,
-            "strategy_alignment": 0.12,
-            "order_book_imbalance": 0.22,
-            "volume_delta": 0.15,
-            "volatility_expansion": 0.18,
-            "liquidity_quality": 0.10,
-            "sentiment": 0.10,
-            "spread_penalty": 0.10,
+    def __init__(
+        self,
+        trend_entry_threshold: float = 0.16,
+        range_entry_threshold: float = 0.13,
+        min_confidence: float = 0.50,
+    ):
+        self.category_weights = {
+            "flow": 0.50,
+            "structure": 0.30,
+            "volatility": 0.20,
+        }
+        self.signal_groups = {
+            "flow": ("oi_price_divergence", "funding_extremes", "liquidation_events"),
+            "structure": ("price_structure", "positioning_breakout"),
+            "volatility": ("volatility_transition",),
         }
         self._history = deque(maxlen=500)
-        self._contribution_totals = {name: 0.0 for name in self.base_weights}
+        self.trend_entry_threshold = trend_entry_threshold
+        self.range_entry_threshold = range_entry_threshold
+        self.min_confidence = min_confidence
 
     @staticmethod
-    def _clip(value: float, lo: float = -1.0, hi: float = 1.0) -> float:
-        return max(lo, min(hi, value))
+    def _clip(v: float, lo: float = -1.0, hi: float = 1.0) -> float:
+        return max(lo, min(hi, v))
 
-    def _robust_scale(self, value: float, scale: float) -> float:
-        # tanh bounds outliers while keeping ordering information.
-        if scale <= 0:
+    def _group_score(self, signal_scores: dict[str, float], keys: tuple[str, ...]) -> float:
+        vals = [self._clip(float(signal_scores.get(k, 0.0))) for k in keys]
+        if not vals:
             return 0.0
-        return self._clip(math.tanh(value / scale))
+        return float(sum(vals) / len(vals))
 
-    def _expected_edge_after_costs_bps(
+    @staticmethod
+    def _edge_quality(edge_stats: dict[str, Any]) -> float:
+        if not edge_stats:
+            return 0.0
+        vals = []
+        for stat in edge_stats.values():
+            if not isinstance(stat, dict):
+                continue
+            expectancy = float(stat.get("expectancy", 0.0) or 0.0)
+            t_stat = float(stat.get("t_stat", 0.0) or 0.0)
+            pf = float(stat.get("profit_factor", 1.0) or 1.0)
+            trade_count = float(stat.get("trades", 0.0) or 0.0)
+            quality = (
+                max(0.0, min(1.0, expectancy * 400.0))
+                + max(0.0, min(1.0, t_stat / 3.0))
+                + max(0.0, min(1.0, (pf - 1.0) / 1.5))
+                + max(0.0, min(1.0, trade_count / 120.0))
+            ) / 4.0
+            vals.append(quality)
+        if not vals:
+            return 0.0
+        return float(sum(vals) / len(vals))
+
+    def combine(
         self,
-        model_signal: float,
-        strategy_component: float,
-        imbalance_component: float,
-        volume_delta_component: float,
-        vol_expansion_component: float,
-        spread_bps: float,
-        stale: bool,
-    ) -> float:
-        # Conservative expected edge model to avoid overtrading under friction.
-        gross_edge_bps = (
-            abs(model_signal) * 26.0
-            + abs(strategy_component) * 16.0
-            + abs(imbalance_component) * 18.0
-            + abs(volume_delta_component) * 14.0
-            + max(0.0, vol_expansion_component) * 10.0
+        signal_scores: dict[str, float],
+        regime: str,
+        edge_stats: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        flow_score = self._group_score(signal_scores, self.signal_groups["flow"])
+        structure_score = self._group_score(signal_scores, self.signal_groups["structure"])
+        volatility_score = self._group_score(signal_scores, self.signal_groups["volatility"])
+
+        # Regime nudges category emphasis while preserving the 50/30/20 baseline.
+        cat_w = dict(self.category_weights)
+        if regime == "trend":
+            cat_w["structure"] *= 1.08
+            cat_w["flow"] *= 1.02
+            cat_w["volatility"] *= 0.90
+        else:
+            cat_w["flow"] *= 1.06
+            cat_w["volatility"] *= 1.04
+            cat_w["structure"] *= 0.90
+        ws = sum(cat_w.values()) or 1.0
+        cat_w = {k: v / ws for k, v in cat_w.items()}
+
+        score = self._clip(
+            (flow_score * cat_w["flow"])
+            + (structure_score * cat_w["structure"])
+            + (volatility_score * cat_w["volatility"])
         )
-        execution_cost_bps = spread_bps + (spread_bps * 0.6) + 2.5
-        stale_penalty = 5.0 if stale else 0.0
-        return gross_edge_bps - execution_cost_bps - stale_penalty
 
-    @staticmethod
-    def _consensus_score(*components: float) -> float:
-        active = [c for c in components if abs(c) >= 0.05]
-        if not active:
-            return 0.0
-        direction = 1 if sum(active) >= 0 else -1
-        aligned = sum(1 for c in active if (1 if c >= 0 else -1) == direction)
-        return aligned / float(len(active))
+        weighted = {
+            "flow": flow_score * cat_w["flow"],
+            "structure": structure_score * cat_w["structure"],
+            "volatility": volatility_score * cat_w["volatility"],
+        }
+        agreement = 0.0
+        active = [v for v in signal_scores.values() if abs(v) > 0.05]
+        if active:
+            sign = 1 if sum(active) >= 0 else -1
+            agreement = sum(1 for x in active if (1 if x >= 0 else -1) == sign) / len(active)
 
-    def _dynamic_thresholds(
-        self,
-        regime: Dict[str, Any],
-        market_snapshot: Dict[str, Any],
-        expected_edge_bps: float,
-        consensus_score: float,
-    ) -> Dict[str, float]:
-        buy = 0.60
-        sell = 0.40
+        flow_sign = 1 if flow_score > 0 else (-1 if flow_score < 0 else 0)
+        struct_sign = 1 if structure_score > 0 else (-1 if structure_score < 0 else 0)
+        flow_alignment = "neutral"
+        if abs(flow_score) < 0.10:
+            flow_alignment = "neutral"
+        elif flow_sign == struct_sign:
+            flow_alignment = "aligned"
+        else:
+            flow_alignment = "conflict"
 
-        if regime.get("market_state") == "VOLATILE" or regime.get("volatility") == "high_volatility":
-            buy += 0.03
-            sell -= 0.03
+        edge_q = self._edge_quality(edge_stats or {})
 
-        spread_bps = float(market_snapshot.get("spread_bps", 0.0) or 0.0)
-        if spread_bps >= 15:
-            buy += 0.02
-            sell -= 0.02
-        if market_snapshot.get("stale"):
-            buy += 0.05
-            sell -= 0.05
+        base_conf = 1.0 / (1.0 + math.exp(-((abs(score) * 3.2) + (agreement * 1.0) + (edge_q * 1.2) - 1.25)))
 
-        # Tighten entries when current expected net edge is weak.
-        if expected_edge_bps < 3.0:
-            buy += 0.03
-            sell -= 0.03
-        elif expected_edge_bps >= 12.0 and consensus_score >= 0.75:
-            buy -= 0.015
-            sell += 0.015
+        if self._history:
+            recent = list(self._history)[-80:]
+            quality_recent = sum(abs(float(x.get("score", 0.0))) for x in recent) / len(recent)
+            base_conf *= min(1.15, 0.8 + quality_recent)
 
-        # Recent low-quality alpha stream should adaptively reduce aggressiveness.
-        recent = list(self._history)[-40:]
-        if recent:
-            avg_recent_edge = sum(float(h.get("expected_edge_bps", 0.0)) for h in recent) / len(recent)
-            if avg_recent_edge < 2.0:
-                buy += 0.015
-                sell -= 0.015
+        confidence = float(max(0.0, min(1.0, base_conf)))
 
-        buy = min(0.72, max(0.56, buy))
-        sell = max(0.28, min(0.44, sell))
-        return {"buy": buy, "sell": sell}
+        entry_threshold = (
+            self.trend_entry_threshold if regime == "trend" else self.range_entry_threshold
+        )
+        if confidence < self.min_confidence or abs(score) < entry_threshold:
+            decision = "none"
+        elif score > 0:
+            decision = "long"
+        else:
+            decision = "short"
+
+        self._history.append(
+            {
+                "score": score,
+                "confidence": confidence,
+                "regime": regime,
+                "decision": decision,
+            }
+        )
+
+        probability = (score + 1.0) / 2.0
+        canonical_signal = "neutral" if decision == "none" else decision
+
+        contributing = sorted(
+            [
+                {"name": k, "contribution": float(v)}
+                for k, v in weighted.items()
+            ],
+            key=lambda x: abs(float(x["contribution"])),
+            reverse=True,
+        )
+
+        return {
+            "signal": canonical_signal,
+            "score": round(float(score), 6),
+            "confidence": round(float(confidence), 6),
+            "regime": regime,
+            "decision": decision,
+            "weights": {k: round(v, 6) for k, v in cat_w.items()},
+            "weighted_scores": {k: round(v, 6) for k, v in weighted.items()},
+            "flow_score": round(float(flow_score), 6),
+            "structure_score": round(float(structure_score), 6),
+            "volatility_score": round(float(volatility_score), 6),
+            "flow_alignment": flow_alignment,
+            "contributing_signals": [
+                {"name": str(x["name"]), "contribution": round(float(x["contribution"]), 6)}
+                for x in contributing
+            ],
+            "thresholds": {
+                "entry": round(float(entry_threshold), 6),
+                "confidence": round(float(self.min_confidence), 6),
+            },
+            "market_context": {
+                "expected_edge_bps": round(float(edge_q * 100.0), 6),
+            },
+            "alpha_score": round(float(probability), 6),
+            "probability": round(float(probability), 6),
+        }
 
     def infer(
         self,
-        prediction: Dict[str, Any],
-        strategy_result: Dict[str, Any],
+        prediction: dict[str, Any],
+        strategy_result: dict[str, Any],
         sentiment_score: float = 0.0,
-        regime: Optional[Dict[str, Any]] = None,
-        market_snapshot: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
-        regime = regime or {}
+        regime: dict[str, Any] | None = None,
+        market_snapshot: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        regime_data = regime or {}
         market_snapshot = market_snapshot or {}
-        weights = self._weights_for_regime(regime)
 
-        model_probability = float(prediction.get("probability", 0.5) or 0.5)
-        model_signal = self._clip((model_probability - 0.5) * 2.0, -1.0, 1.0)
-        strategy_component = self._robust_scale(
-            float(strategy_result.get("score", 0.0) or 0.0), 0.5
-        )
+        trend_hint = str(regime_data.get("trend", "")).lower()
+        market_state = str(regime_data.get("market_state", "")).upper()
+        regime_label = "range"
+        if market_state == "TREND" or trend_hint in {"trend", "uptrend", "downtrend"}:
+            regime_label = "trend"
 
-        sentiment_component = self._robust_scale(float(sentiment_score or 0.0), 0.6)
-        imbalance_component = self._robust_scale(
-            float(market_snapshot.get("order_book_imbalance", 0.0) or 0.0), 0.65
-        )
-        volume_delta_component = self._robust_scale(
-            float(market_snapshot.get("volume_delta", 0.0) or 0.0), 0.8
-        )
-        vol_expansion_component = self._robust_scale(
-            float(market_snapshot.get("volatility_expansion", 0.0) or 0.0), 0.8
-        )
-        spread_bps = float(market_snapshot.get("spread_bps", 0.0) or 0.0)
-        book_depth_usd = float(market_snapshot.get("book_depth_usd", 0.0) or 0.0)
-        depth_score = self._clip(book_depth_usd / 500000.0, 0.0, 1.0)
-        spread_quality = self._clip(1.0 - (spread_bps / 25.0), 0.0, 1.0)
-        liquidity_quality = self._clip((depth_score * 0.6) + (spread_quality * 0.4), 0.0, 1.0)
-        liquidity_component = self._clip((liquidity_quality * 2.0) - 1.0, -1.0, 1.0)
-        spread_penalty = -self._clip(spread_bps / 25.0, 0.0, 1.0)
+        model_signal = ((float(prediction.get("probability", 0.5) or 0.5) - 0.5) * 2.0)
+        strategy_score = float(strategy_result.get("score", 0.0) or 0.0)
 
+        imbalance = float(market_snapshot.get("order_book_imbalance", 0.0) or 0.0)
+        volume_delta = float(market_snapshot.get("volume_delta", 0.0) or 0.0)
+        volatility_expansion = float(market_snapshot.get("volatility_expansion", 0.0) or 0.0)
+
+        signal_scores = {
+            "price_structure": self._clip(strategy_score * 0.8 + model_signal * 0.45),
+            "positioning_breakout": self._clip((model_signal * 0.7) + (imbalance * 0.6)),
+            "funding_extremes": self._clip(sentiment_score * 0.35),
+            "oi_price_divergence": self._clip((imbalance * 0.7) + (volume_delta * 0.3)),
+            "liquidation_events": self._clip((imbalance * 0.2) + (volume_delta * 0.3)),
+            "volatility_transition": self._clip(volatility_expansion),
+        }
+        out = self.combine(signal_scores=signal_scores, regime=regime_label, edge_stats={})
+
+        spread_bps = max(0.0, float(market_snapshot.get("spread_bps", 0.0) or 0.0))
+        depth_usd = max(0.0, float(market_snapshot.get("book_depth_usd", 250000.0) or 0.0))
         stale = bool(market_snapshot.get("stale", False))
-        expected_edge_bps = self._expected_edge_after_costs_bps(
-            model_signal=model_signal,
-            strategy_component=strategy_component,
-            imbalance_component=imbalance_component,
-            volume_delta_component=volume_delta_component,
-            vol_expansion_component=vol_expansion_component,
-            spread_bps=spread_bps,
-            stale=stale,
-        )
+        vol_label = str(regime_data.get("volatility", "")).lower()
 
-        components = {
-            "model_probability": round(model_signal, 6),
-            "strategy_alignment": round(strategy_component, 6),
-            "order_book_imbalance": round(imbalance_component, 6),
-            "volume_delta": round(volume_delta_component, 6),
-            "volatility_expansion": round(vol_expansion_component, 6),
-            "liquidity_quality": round(liquidity_component, 6),
-            "sentiment": round(sentiment_component, 6),
-            "spread_penalty": round(spread_penalty, 6),
-        }
+        depth_penalty = 0.0 if depth_usd <= 0.0 else max(0.0, 8.0 - math.log10(depth_usd + 1.0) * 1.5)
+        stale_penalty = 6.0 if stale else 0.0
+        vol_penalty = 3.0 if vol_label == "high_volatility" else 0.0
+        cost_bps = spread_bps + depth_penalty + stale_penalty + vol_penalty
 
-        weighted_components = {
-            name: round(value * weights.get(name, 0.0), 6)
-            for name, value in components.items()
-        }
-        # Convert weighted signed score into bounded 0..1 alpha score.
-        alpha_raw = sum(weighted_components.values())
-        alpha_score = round((self._clip(alpha_raw, -1.0, 1.0) + 1.0) / 2.0, 6)
-        logistic_input = self._clip((alpha_score - 0.5) * 6.0, -8.0, 8.0)
-        probability = round(1.0 / (1.0 + math.exp(-logistic_input)), 6)
-
-        directional_consensus = self._consensus_score(
-            model_signal,
-            strategy_component,
-            imbalance_component,
-            volume_delta_component,
-        )
-        agreement_score = self._clip(
-            abs(sum(1 if v > 0 else -1 for v in components.values() if abs(v) > 0.05))
-            / max(1.0, float(len(components))),
+        gross_edge_bps = max(
             0.0,
-            1.0,
+            (abs(float(out.get("score", 0.0))) * 45.0)
+            + (abs(strategy_score) * 18.0)
+            + (abs(model_signal) * 14.0),
         )
-        confidence = min(
-            1.0,
-            abs(alpha_score - 0.5) * 2.0
-            + abs(model_signal) * 0.20
-            + agreement_score * 0.20
-            + directional_consensus * 0.20,
-        )
-        if stale:
-            confidence *= 0.5
-        if spread_bps >= 20:
-            confidence *= 0.75
+        expected_edge_bps = max(0.0, gross_edge_bps - cost_bps)
 
-        # Net expected edge should directly scale confidence and trade selectivity.
-        if expected_edge_bps < 0:
-            confidence *= 0.35
-        elif expected_edge_bps < 5:
-            confidence *= 0.70
-        elif expected_edge_bps >= 15:
-            confidence = min(1.0, confidence * 1.08)
+        quality_scalar = max(0.0, min(1.0, expected_edge_bps / max(gross_edge_bps, 1e-6)))
+        adjusted_conf = float(out["confidence"]) * (0.55 + 0.45 * quality_scalar)
+        entry = float(out["thresholds"]["entry"]) + (0.02 if vol_label == "high_volatility" else 0.0)
+        entry += min(0.05, spread_bps / 500.0)
 
-        confidence = round(self._clip(confidence, 0.0, 1.0), 6)
-
-        thresholds = self._dynamic_thresholds(
-            regime,
-            market_snapshot,
-            expected_edge_bps=expected_edge_bps,
-            consensus_score=directional_consensus,
-        )
-
-        if probability >= thresholds["buy"]:
-            signal = "BUY"
-        elif probability <= thresholds["sell"]:
-            signal = "SELL"
+        score = float(out["score"])
+        confidence_gate = self.min_confidence * 0.60
+        if adjusted_conf < confidence_gate or abs(score) < entry or expected_edge_bps <= 0.0:
+            decision = "none"
+            signal = "neutral"
+        elif score > 0:
+            decision = "long"
+            signal = "long"
         else:
-            signal = "HOLD"
+            decision = "short"
+            signal = "short"
 
-        contributors = [
-            {
-                "name": name,
-                "raw": components[name],
-                "weight": round(weights.get(name, 0.0), 6),
-                "contribution": weighted_components[name],
-            }
-            for name in sorted(
-                weighted_components,
-                key=lambda item: abs(weighted_components[item]),
-                reverse=True,
-            )
-        ]
-
-        for name, value in weighted_components.items():
-            self._contribution_totals[name] = self._contribution_totals.get(
-                name, 0.0
-            ) + float(abs(value))
-        self._history.append(
-            {
-                "signal": signal,
-                "probability": probability,
-                "confidence": confidence,
-                "alpha_score": alpha_score,
-                "alpha_raw": round(alpha_raw, 6),
-                "spread_bps": spread_bps,
-                "stale": stale,
-                "expected_edge_bps": round(expected_edge_bps, 4),
-            }
-        )
-
-        importance_total = sum(self._contribution_totals.values()) or 1.0
-        signal_importance = {
-            name: round(value / importance_total, 6)
-            for name, value in sorted(
-                self._contribution_totals.items(), key=lambda kv: kv[1], reverse=True
-            )
-        }
-
-        return {
-            "signal": signal,
-            "probability": probability,
-            "confidence": confidence,
-            "alpha_score": alpha_score,
-            "contributing_signals": contributors,
-            "weights": {k: round(v, 6) for k, v in weights.items()},
-            "thresholds": {
-                "buy": round(thresholds["buy"], 4),
-                "sell": round(thresholds["sell"], 4),
-            },
-            "signal_importance": signal_importance,
-            "market_context": {
-                "spread_bps": round(spread_bps, 4),
-                "order_book_imbalance": round(imbalance_component, 6),
-                "volume_delta": round(volume_delta_component, 6),
-                "volatility_expansion": round(vol_expansion_component, 6),
-                "liquidity_quality": round(liquidity_quality, 6),
-                "directional_consensus": round(directional_consensus, 6),
-                "expected_edge_bps": round(expected_edge_bps, 4),
-                "stale": stale,
-                "connection_state": market_snapshot.get("connection_state", "unknown"),
-            },
-        }
-
-    def _weights_for_regime(self, regime: Dict[str, Any]) -> Dict[str, float]:
-        weights = dict(self.base_weights)
-        market_state = regime.get("market_state", "UNKNOWN")
-        volatility = regime.get("volatility", "unknown")
-
-        if market_state == "TREND":
-            weights["model_probability"] *= 1.15
-            weights["strategy_alignment"] *= 1.10
-            weights["order_book_imbalance"] *= 1.10
-        elif market_state == "RANGE":
-            weights["order_book_imbalance"] *= 1.20
-            weights["volume_delta"] *= 1.10
-            weights["strategy_alignment"] *= 0.95
-
-        if market_state == "VOLATILE" or volatility == "high_volatility":
-            weights["spread_penalty"] *= 1.40
-            weights["model_probability"] *= 0.85
-            weights["volatility_expansion"] *= 1.30
-            weights["liquidity_quality"] *= 1.10
-            weights["strategy_alignment"] *= 0.85
-
-        total = sum(weights.values()) or 1.0
-        return {name: value / total for name, value in weights.items()}
+        out["confidence"] = round(max(0.0, min(1.0, adjusted_conf)), 6)
+        out["thresholds"]["entry"] = round(max(0.0, entry), 6)
+        out["decision"] = decision
+        out["signal"] = signal
+        out["market_context"]["expected_edge_bps"] = round(expected_edge_bps, 6)
+        return out

@@ -19,6 +19,7 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
 import time
 from collections import defaultdict
@@ -177,7 +178,7 @@ class EventBus:
         handlers = self._subscribers.get(event_type, [])
         for handler in handlers:
             try:
-                if asyncio.iscoroutinefunction(handler):
+                if inspect.iscoroutinefunction(handler):
                     await handler(event)
                 else:
                     handler(event)

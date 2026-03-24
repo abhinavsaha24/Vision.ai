@@ -31,6 +31,17 @@ export function MarketChart({
   const chartRef = useRef<IChartApi | null>(null);
   const market = useMarketStore((state) => state.market);
 
+  const disposeChart = () => {
+    if (!chartRef.current) return;
+    try {
+      chartRef.current.remove();
+    } catch {
+      // Ignore cases where chart was already disposed during rapid remounts.
+    } finally {
+      chartRef.current = null;
+    }
+  };
+
   const priceSeriesData = useMemo(
     () =>
       candles.map((k) => ({
@@ -57,7 +68,7 @@ export function MarketChart({
   useEffect(() => {
     if (!containerRef.current) return;
 
-    chartRef.current?.remove();
+    disposeChart();
 
     const chart = createChart(containerRef.current, {
       layout: {
@@ -138,7 +149,15 @@ export function MarketChart({
 
     return () => {
       resizeObserver.disconnect();
-      chart.remove();
+      if (chartRef.current === chart) {
+        disposeChart();
+      } else {
+        try {
+          chart.remove();
+        } catch {
+          // No-op if a newer render already disposed this instance.
+        }
+      }
     };
   }, [candles, markers, priceSeriesData, volumeSeriesData]);
 

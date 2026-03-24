@@ -92,34 +92,53 @@ class RealtimeMarketFeed:
         return (time.time() - updated) > self.stale_after_seconds
 
     async def _run_symbol(self, symbol: str) -> None:
-        self._refresh_from_rest(symbol)
+        await asyncio.to_thread(self._refresh_from_rest, symbol)
         stream_symbol = symbol.lower()
-        ws_url = (
-            "wss://stream.binance.com:9443/stream?streams="
-            f"{stream_symbol}@ticker/{stream_symbol}@trade/{stream_symbol}@depth20@100ms"
-        )
+        streams = [
+            (f"wss://stream.binance.com:9443/ws/{stream_symbol}@ticker", "ticker"),
+            (f"wss://stream.binance.com:9443/ws/{stream_symbol}@trade", "trade"),
+            (f"wss://stream.binance.com:9443/ws/{stream_symbol}@depth20@1000ms", "depth"),
+        ]
+        tasks = [
+            asyncio.create_task(self._run_symbol_stream(symbol, url, stream_name))
+            for url, stream_name in streams
+        ]
+        try:
+            await asyncio.gather(*tasks)
+        finally:
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
 
+    async def _run_symbol_stream(self, symbol: str, ws_url: str, stream_name: str) -> None:
+        backoff = 1.0
         while self._running:
             try:
                 async with websockets.connect(
                     ws_url, ping_interval=20, ping_timeout=20, close_timeout=5
                 ) as socket:
-                    logger.info("Realtime feed connected for %s", symbol)
+                    logger.info("Realtime feed connected for %s stream=%s", symbol, stream_name)
+                    backoff = 1.0
                     async for raw_message in socket:
                         if not self._running:
                             break
-                        self._handle_message(symbol, raw_message)
+                        self._handle_message(symbol, raw_message, stream_name)
             except Exception as exc:
                 logger.warning(
-                    "Realtime feed reconnect for %s after error: %s", symbol, exc
+                    "Realtime feed reconnect for %s stream=%s after error: %s",
+                    symbol,
+                    stream_name,
+                    exc,
                 )
                 self._state.setdefault(symbol, {})["last_error"] = str(exc)
-                await asyncio.sleep(2.0)
+                await asyncio.sleep(backoff)
+                backoff = min(60.0, backoff * 2.0)
 
-    def _handle_message(self, symbol: str, raw_message: str) -> None:
+    def _handle_message(self, symbol: str, raw_message: str, stream_hint: str) -> None:
         payload = json.loads(raw_message)
-        stream = payload.get("stream", "")
-        data = payload.get("data", {})
+        stream = str(payload.get("e", stream_hint))
+        data = payload
 
         state = self._state.setdefault(symbol, self._empty_snapshot(symbol))
         state["symbol"] = symbol
@@ -128,7 +147,7 @@ class RealtimeMarketFeed:
         state["updated_at_ts"] = time.time()
         state["connection_state"] = "streaming"
 
-        if "@ticker" in stream:
+        if stream in {"24hrTicker", "ticker"}:
             last_price = float(data.get("c", state.get("last_price", 0.0)) or 0.0)
             state["last_price"] = last_price
             state["best_bid"] = float(
@@ -146,7 +165,7 @@ class RealtimeMarketFeed:
             state["volume_24h"] = float(
                 data.get("v", state.get("volume_24h", 0.0)) or 0.0
             )
-        elif "@trade" in stream:
+        elif stream in {"trade", "aggTrade"}:
             trade = {
                 "price": float(data.get("p", 0.0) or 0.0),
                 "quantity": float(data.get("q", 0.0) or 0.0),
@@ -157,12 +176,12 @@ class RealtimeMarketFeed:
             }
             self._recent_trades[symbol].append(trade)
             state["last_trade"] = trade
-        elif "@depth" in stream:
+        elif stream in {"depthUpdate", "depth"}:
             bids = [
-                [float(price), float(size)] for price, size in data.get("bids", [])[:20]
+                [float(price), float(size)] for price, size in data.get("b", data.get("bids", []))[:20]
             ]
             asks = [
-                [float(price), float(size)] for price, size in data.get("asks", [])[:20]
+                [float(price), float(size)] for price, size in data.get("a", data.get("asks", []))[:20]
             ]
             state["bids"] = bids
             state["asks"] = asks

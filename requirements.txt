@@ -70,6 +70,7 @@ platformdirs==4.9.4
 propcache==0.4.1
 protobuf==6.33.5
 pycares==5.0.1
+pyasn1==0.6.3
 pycparser==3.0
 referencing==0.37.0
 rpds-py==0.30.0

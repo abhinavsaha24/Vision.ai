@@ -14,7 +14,7 @@ function resolveApiBaseUrl(): string {
     );
   }
 
-  return "http://127.0.0.1:10000";
+  return "";
 }
 
 const apiClient = axios.create({

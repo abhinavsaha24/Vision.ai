@@ -33,10 +33,10 @@ class Settings(BaseSettings):
     # Server
     # --------------------------------------------------
     environment: str = "production"
-    port: int = 10000
+    port: int = 8080
     log_level: str = "INFO"
     api_host: str = "0.0.0.0"
-    api_port: int = 10000  # kept for backwards compat
+    api_port: int = 8080  # kept for backwards compat
 
     # --------------------------------------------------
     # Data
@@ -116,6 +116,7 @@ class Settings(BaseSettings):
     # --------------------------------------------------
     paper_trading_initial_cash: float = 10000
     paper_trading_interval: int = 300  # seconds
+    paper_trading_api_autostart: bool = False
 
     # --------------------------------------------------
     # Live trading (safety-critical)

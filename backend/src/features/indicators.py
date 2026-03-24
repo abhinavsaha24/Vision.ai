@@ -315,7 +315,7 @@ class FeatureEngineer:
         for lag in [1, 2, 5]:
             df[f"autocorr_lag{lag}"] = (
                 ret.rolling(window, min_periods=lag + 1)
-                .apply(lambda x, l=lag: x.autocorr(lag=l) if len(x) > l else 0, raw=False)
+                .apply(lambda x, l=lag: x.autocorr(lag=l) if len(x) >= (l + 2) else 0.0, raw=False)
                 .fillna(0)
             )
 

@@ -81,7 +81,7 @@ pip install -r requirements.txt
 Navigate to the dashboard directory and install node modules:
 
 ```bash
-cd ai-trading-dashboard
+cd frontend
 npm install
 ```
 
@@ -97,9 +97,24 @@ The project uses `.env` files to securely load API keys.
 cp .env.example .env
 ```
 
-2. Open `.env` and fill in your keys (all except Binance are strictly necessary for full functionality, though CoinGecko and basic Binance endpoints work without keys):
+2. Open `.env` and fill in values. Production and local containers use DB component variables as the single source of truth:
 
 ```ini
+# Core runtime
+API_PORT=8080
+LOG_LEVEL=INFO
+
+# Database (single source of truth)
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=vision_core
+DB_USER=vision
+DB_PASSWORD=change_me
+
+# Optional override (if set, this takes precedence)
+# DATABASE_URL=postgresql://vision:change_me@localhost:5432/vision_core
+
+# Optional data/news integrations
 HF_TOKEN=your_huggingface_token
 FINNHUB_KEY=your_finnhub_key
 NEWSAPI_KEY=your_newsapi_key
@@ -114,18 +129,25 @@ _Note: The `.env` file is excluded from git to prevent accidental key leaks._
 
 ## 🏃‍♂️ Running the Project
 
-You need two terminal windows to run both the backend API and the frontend UI.
+Canonical production-like local run (recommended):
+
+```bash
+docker compose -f deployment/docker-compose.quant.yml up --build
+```
+
+This starts API + trading + risk + execution workers with Redis and Postgres, and exposes API on `http://localhost:8080`.
+
+Alternative local development mode (without Docker) uses two terminal windows.
 
 ### Running the Backend
 
 In your first terminal (from the project root, with venv activated):
 
 ```bash
-python -m src.database.init_database
-python -m src.api.main
+python -m backend.src.platform.api_service
 ```
 
-The FastAPI backend will start on `http://localhost:10000`.
+The FastAPI backend will start on `http://localhost:8080`.
 
 ### Running the Frontend
 
@@ -138,6 +160,13 @@ npm run dev
 ```
 
 The React development server will open the dashboard in your browser.
+
+Set frontend runtime env in `frontend/.env.local`:
+
+```ini
+NEXT_PUBLIC_API_URL=http://localhost:8080
+NEXT_PUBLIC_WS_URL=ws://localhost:8080
+```
 
 ---
 
@@ -154,13 +183,18 @@ pip install -r requirements.txt
 2. Start command:
 
 ```bash
-uvicorn backend.src.api.main:app --host 0.0.0.0 --port $PORT
+uvicorn backend.src.platform.api_service:app --host 0.0.0.0 --port 8080
 ```
 
 3. Required env vars:
 
 ```ini
 JWT_SECRET=<min_32_chars>
+DB_HOST=<db-host>
+DB_PORT=5432
+DB_NAME=vision_core
+DB_USER=vision
+DB_PASSWORD=<strong-password>
 TRADING_MODE=paper
 LIVE_TRADING_ENABLED=false
 CORS_ALLOWED_ORIGINS=https://<your-vercel-domain>,https://*.vercel.app
@@ -183,6 +217,51 @@ After deploy, validate:
 - `/health`
 - `/system/readiness`
 - authenticated websocket `/ws/market?symbol=BTCUSDT&token=<jwt>`
+
+---
+
+## Institutional Microservices Stack (New)
+
+The repository now includes a production-oriented, event-driven architecture that separates API, trading engine, risk engine, and execution engine into independently scalable services.
+
+- Stateless API control plane: `backend.src.platform.api_service:app`
+- Trading worker: `backend.src.platform.workers.trading_engine`
+- Risk worker: `backend.src.platform.workers.risk_engine`
+- Execution worker: `backend.src.platform.workers.execution_engine`
+- Queue: Redis Streams (`events.trading`, `events.execution`)
+- Durable storage: PostgreSQL
+
+Use the dedicated local compose stack:
+
+```bash
+docker compose -f deployment/docker-compose.quant.yml up --build
+```
+
+Detailed runbook and deployment notes:
+
+- `docs/institutional_microservices_refactor.md`
+- `deployment/Dockerfile.quant`
+- `fly.toml`
+
+---
+
+## ✅ CI/CD Quality Gates
+
+GitHub Actions workflow: `.github/workflows/ci.yml`
+
+The pipeline runs on every push/PR and fails on any error in:
+
+- Backend tests: `pytest -q`
+- Python dependency health: `pip check`
+- Python security audit: `pip_audit`
+- Frontend lint: `npm run lint`
+- Frontend build: `npm run build`
+- Frontend route smoke tests: `npm run test:routes`
+- Frontend security audit: `npm audit --omit=dev --audit-level=moderate`
+
+Repository release workflow and branch model are documented in:
+
+- `docs/release_branching_strategy.md`
 
 ---
 

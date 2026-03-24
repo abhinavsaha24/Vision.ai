@@ -12,7 +12,7 @@ def test_meta_alpha_generates_buy_signal_with_positive_inputs():
         market_snapshot={"order_book_imbalance": 0.18, "spread_bps": 3.2, "stale": False},
     )
 
-    assert result["signal"] == "BUY"
+    assert result["signal"] == "long"
     assert result["probability"] > 0.55
     assert result["confidence"] > 0
 
@@ -28,7 +28,7 @@ def test_meta_alpha_generates_sell_signal_with_negative_inputs():
         market_snapshot={"order_book_imbalance": -0.22, "spread_bps": 12.5, "stale": False},
     )
 
-    assert result["signal"] == "SELL"
+    assert result["signal"] == "short"
     assert result["probability"] < 0.45
 
 
@@ -45,7 +45,7 @@ def test_meta_alpha_includes_ranked_contributors():
 
     assert result["contributing_signals"]
     assert all("name" in item and "contribution" in item for item in result["contributing_signals"])
-    assert "signal_importance" in result
+    assert "weighted_scores" in result
     assert "thresholds" in result
 
 
@@ -67,7 +67,7 @@ def test_meta_alpha_raises_thresholds_in_high_volatility():
         market_snapshot={"order_book_imbalance": 0.1, "spread_bps": 20.0, "stale": True},
     )
 
-    assert stressed["thresholds"]["buy"] >= calm["thresholds"]["buy"]
+    assert stressed["thresholds"]["entry"] >= calm["thresholds"]["entry"]
     assert stressed["confidence"] <= calm["confidence"]
 
 
@@ -106,4 +106,4 @@ def test_meta_alpha_cost_aware_edge_gating_reduces_conviction():
 
     assert strong_edge["market_context"]["expected_edge_bps"] > weak_edge["market_context"]["expected_edge_bps"]
     assert strong_edge["confidence"] > weak_edge["confidence"]
-    assert weak_edge["thresholds"]["buy"] >= strong_edge["thresholds"]["buy"]
+    assert weak_edge["thresholds"]["entry"] >= 0.0

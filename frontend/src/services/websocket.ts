@@ -36,7 +36,7 @@ function resolveWsBaseUrl(): string {
     return `${protocol}://${window.location.host}`;
   }
 
-  return "ws://127.0.0.1:10000";
+  return "ws://localhost:3000";
 }
 
 function endpointFor(channel: ChannelName): string {
@@ -84,9 +84,29 @@ class RealtimeChannel<T> {
     }
   }
 
+  private scheduleReconnect() {
+    if (this.closedByUser) return;
+    this.clearTimers();
+    this.reconnectTimer = setTimeout(
+      () => {
+        this.reconnectDelayMs = Math.min(this.reconnectDelayMs * 1.8, 30000);
+        this.connect();
+      },
+      this.reconnectDelayMs + Math.floor(Math.random() * 200),
+    );
+  }
+
   private connect() {
     const url = this.buildUrl();
-    this.ws = new WebSocket(url);
+    try {
+      this.ws = new WebSocket(url);
+    } catch (error) {
+      console.error("Realtime websocket construction failed", { url, error });
+      this.ws = null;
+      this.notifyStatus(false);
+      this.scheduleReconnect();
+      return;
+    }
 
     this.ws.onopen = () => {
       this.reconnectDelayMs = 1200;
@@ -147,14 +167,7 @@ class RealtimeChannel<T> {
     this.ws.onclose = () => {
       this.notifyStatus(false);
       this.clearTimers();
-      if (this.closedByUser) return;
-      this.reconnectTimer = setTimeout(
-        () => {
-          this.reconnectDelayMs = Math.min(this.reconnectDelayMs * 1.8, 30000);
-          this.connect();
-        },
-        this.reconnectDelayMs + Math.floor(Math.random() * 200),
-      );
+      this.scheduleReconnect();
     };
 
     this.ws.onerror = () => {

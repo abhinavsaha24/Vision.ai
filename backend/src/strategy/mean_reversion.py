@@ -149,6 +149,8 @@ class MeanReversionStrategy:
             lag = series.shift(1).dropna()
             delta = series.diff().dropna()
             min_len = min(len(lag), len(delta))
+            if min_len < 2:
+                return float("inf")
             lag = lag.iloc[-min_len:]
             delta = delta.iloc[-min_len:]
 
@@ -156,7 +158,7 @@ class MeanReversionStrategy:
             y = delta.values
 
             var_x = np.var(x)
-            if var_x == 0:
+            if not np.isfinite(var_x) or var_x <= 1e-12:
                 return float("inf")
 
             theta = np.cov(x, y)[0, 1] / var_x

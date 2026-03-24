@@ -12,19 +12,18 @@ volumes:
   redis_data:
 
 services:
-
   api-gateway:
     build:
       context: ..
       dockerfile: deployment/Dockerfile
-    command: uvicorn backend.src.services.api_gateway_service:app --host 0.0.0.0 --port 10000
+    command: uvicorn backend.src.services.api_gateway_service:app --host 0.0.0.0 --port 8080
     ports:
-      - "10000:10000"
+      - "8080:8080"
     environment:
       - REDIS_ENABLED=true
       - REDIS_URL=redis://redis:6379/0
-      - CORE_DATABASE_URL=postgresql://vision:ai@pg-core:5432/vision_core
-      - TIMESCALE_DATABASE_URL=postgresql://vision:ai@timescaledb:5432/vision_market
+      - CORE_DATABASE_URL=postgresql://${DB_USER:-vision}:${DB_PASSWORD:-ai}@pg-core:5432/vision_core
+      - TIMESCALE_DATABASE_URL=postgresql://${DB_USER:-vision}:${DB_PASSWORD:-ai}@timescaledb:5432/vision_market
       - RISK_SERVICE_URL=http://risk-service:8001
       - PORTFOLIO_SERVICE_URL=http://portfolio-service:8002
     depends_on:
@@ -36,7 +35,13 @@ services:
     networks:
       - vision-net
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:10000/health/live')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8080/health/live')",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -50,7 +55,7 @@ services:
       - "10101:10101"
     environment:
       - REDIS_URL=redis://redis:6379/0
-      - MARKET_DATABASE_URL=postgresql://vision:ai@timescaledb:5432/vision_market
+      - MARKET_DATABASE_URL=postgresql://${DB_USER:-vision}:${DB_PASSWORD:-ai}@timescaledb:5432/vision_market
       - CLICKHOUSE_URL=http://clickhouse:8123
     depends_on:
       - redis
@@ -59,7 +64,13 @@ services:
     networks:
       - vision-net
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:10101/docs')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:10101/docs')",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -78,7 +89,13 @@ services:
     networks:
       - vision-net
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:10102/docs')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:10102/docs')",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -98,7 +115,13 @@ services:
     networks:
       - vision-net
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:10103/docs')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:10103/docs')",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -119,7 +142,13 @@ services:
     networks:
       - vision-net
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:10104/docs')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:10104/docs')",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -139,7 +168,13 @@ services:
     networks:
       - vision-net
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:10105/docs')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:10105/docs')",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -153,14 +188,20 @@ services:
       - "8001:8001"
     environment:
       - REDIS_URL=redis://redis:6379/0
-      - CORE_DATABASE_URL=postgresql://vision:ai@pg-core:5432/vision_core
+      - CORE_DATABASE_URL=postgresql://${DB_USER:-vision}:${DB_PASSWORD:-ai}@pg-core:5432/vision_core
     depends_on:
       - redis
       - pg-core
     networks:
       - vision-net
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/docs')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8001/docs')",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -174,14 +215,20 @@ services:
       - "8002:8002"
     environment:
       - REDIS_URL=redis://redis:6379/0
-      - CORE_DATABASE_URL=postgresql://vision:ai@pg-core:5432/vision_core
+      - CORE_DATABASE_URL=postgresql://${DB_USER:-vision}:${DB_PASSWORD:-ai}@pg-core:5432/vision_core
     depends_on:
       - redis
       - pg-core
     networks:
       - vision-net
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/docs')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8002/docs')",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -195,7 +242,7 @@ services:
       - "10108:10108"
     environment:
       - REDIS_URL=redis://redis:6379/0
-      - CORE_DATABASE_URL=postgresql://vision:ai@pg-core:5432/vision_core
+      - CORE_DATABASE_URL=postgresql://${DB_USER:-vision}:${DB_PASSWORD:-ai}@pg-core:5432/vision_core
     depends_on:
       - redis
       - pg-core
@@ -203,7 +250,13 @@ services:
     networks:
       - vision-net
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:10108/docs')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:10108/docs')",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -217,14 +270,20 @@ services:
       - "10109:10109"
     environment:
       - REDIS_URL=redis://redis:6379/0
-      - CORE_DATABASE_URL=postgresql://vision:ai@pg-core:5432/vision_core
+      - CORE_DATABASE_URL=postgresql://${DB_USER:-vision}:${DB_PASSWORD:-ai}@pg-core:5432/vision_core
     depends_on:
       - redis
       - pg-core
     networks:
       - vision-net
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:10109/docs')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:10109/docs')",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -242,6 +301,7 @@ services:
   pg-core:
     image: postgres:15-alpine
     environment:
+      # development-only credentials; override via environment for non-local deployments
       - POSTGRES_DB=vision_core
       - POSTGRES_USER=vision
       - POSTGRES_PASSWORD=ai
@@ -255,6 +315,7 @@ services:
   timescaledb:
     image: timescale/timescaledb:latest-pg15
     environment:
+      # development-only credentials; override via environment for non-local deployments
       - POSTGRES_DB=vision_market
       - POSTGRES_USER=vision
       - POSTGRES_PASSWORD=ai
