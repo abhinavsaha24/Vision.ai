@@ -1,0 +1,115 @@
+name: vision-ai-quant
+
+x-app-env: &app-env
+  DB_HOST: ${DB_HOST:-postgres}
+  DB_PORT: ${DB_PORT:-5432}
+  DB_NAME: ${DB_NAME:-vision_core}
+  DB_USER: ${DB_USER:-vision}
+  DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+  REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+services:
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-vision_core}
+      POSTGRES_USER: ${DB_USER:-vision}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+    ports:
+      - "${DB_HOST_PORT:-55432}:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USER:-vision} -d ${DB_NAME:-vision_core}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api-service:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile.quant
+    environment:
+      <<: *app-env
+      APP_MODULE: backend.src.platform.api_service:app
+      PORT: 8080
+      DATABASE_URL: postgresql://${DB_USER:-vision}:${DB_PASSWORD:?DB_PASSWORD must be set}@${DB_HOST:-postgres}:${DB_PORT:-5432}/${DB_NAME:-vision_core}
+      SERVICE_NAME: api-service
+    depends_on:
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    restart: unless-stopped
+
+  trading-engine:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile.quant
+    command: python -m backend.src.platform.workers.trading_engine
+    environment:
+      <<: *app-env
+      DATABASE_URL: postgresql://${DB_USER:-vision}:${DB_PASSWORD:?DB_PASSWORD must be set}@${DB_HOST:-postgres}:${DB_PORT:-5432}/${DB_NAME:-vision_core}
+      SERVICE_NAME: trading-engine
+      FORCE_TEST_TRADE: ${FORCE_TEST_TRADE:-0}
+      FORCE_TEST_TRADE_NOTIONAL: ${FORCE_TEST_TRADE_NOTIONAL:-50}
+      FORCE_TEST_TRADE_EVERY_N_TICKS: ${FORCE_TEST_TRADE_EVERY_N_TICKS:-20}
+    depends_on:
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  risk-engine:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile.quant
+    command: python -m backend.src.platform.workers.risk_engine
+    environment:
+      <<: *app-env
+      DATABASE_URL: postgresql://${DB_USER:-vision}:${DB_PASSWORD:?DB_PASSWORD must be set}@${DB_HOST:-postgres}:${DB_PORT:-5432}/${DB_NAME:-vision_core}
+      SERVICE_NAME: risk-engine
+      MAX_POSITION_SIZE: 1.0
+      MAX_NOTIONAL_EXPOSURE: 50000
+      MAX_DRAWDOWN_PCT: 0.15
+    depends_on:
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  execution-engine:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile.quant
+    command: python -m backend.src.platform.workers.execution_engine
+    environment:
+      <<: *app-env
+      DATABASE_URL: postgresql://${DB_USER:-vision}:${DB_PASSWORD:?DB_PASSWORD must be set}@${DB_HOST:-postgres}:${DB_PORT:-5432}/${DB_NAME:-vision_core}
+      SERVICE_NAME: execution-engine
+      EXECUTION_RETRY_LIMIT: 3
+      EXECUTION_RETRY_DELAY_SECONDS: 0.75
+    depends_on:
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pg_data:

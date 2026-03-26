@@ -1,0 +1,321 @@
+"use client";
+
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { motion } from "framer-motion";
+import { apiService, type Kline } from "@/services/api";
+import {
+  useMarketStore,
+  type MarketSnapshot,
+  type SignalSnapshot,
+} from "@/store/marketStore";
+import { usePortfolioStore } from "@/store/portfolioStore";
+import { useTerminalWebSocket } from "@/hooks/useTerminalWebSocket";
+import { MarketChart } from "@/components/charts/market-chart";
+import { OrderbookPanel } from "@/components/dashboard/orderbook-panel";
+import {
+  TradeFlowPanel,
+  type TradeEntry,
+} from "@/components/dashboard/trade-flow-panel";
+import {
+  SignalPanel,
+  type SignalEvent,
+} from "@/components/dashboard/signal-panel";
+import { EngineStatusPanel } from "@/components/dashboard/engine-status-panel";
+import { TradingPanel } from "@/components/trading/trading-panel";
+import { PortfolioPanel } from "@/components/dashboard/portfolio-panel";
+import { TerminalCard } from "@/components/ui/terminal-card";
+
+const ASSETS = [
+  "BTCUSDT",
+  "ETHUSDT",
+  "SOLUSDT",
+  "BNBUSDT",
+  "XRPUSDT",
+  "DOGEUSDT",
+];
+
+/* ── Animated number display ── */
+function PriceTicker({
+  value,
+  label,
+}: {
+  value: number | null;
+  label: string;
+}) {
+  return (
+    <div className="text-center">
+      <span className="text-[10px] uppercase tracking-widest text-slate-500">
+        {label}
+      </span>
+      <p className="mt-0.5 font-mono text-sm font-semibold text-slate-100">
+        {value !== null ? value.toFixed(2) : "--"}
+      </p>
+    </div>
+  );
+}
+
+export function InstitutionalTerminal() {
+  const symbol = useMarketStore((s) => s.symbol);
+  const setSymbol = useMarketStore((s) => s.setSymbol);
+  const market = useMarketStore((s) => s.market);
+  const signal = useMarketStore((s) => s.signal);
+  const updateMarket = useMarketStore((s) => s.updateMarket);
+  const updateSignal = useMarketStore((s) => s.updateSignal);
+  const updatePortfolio = usePortfolioStore((s) => s.updatePortfolio);
+  const updateMetrics = usePortfolioStore((s) => s.updateMetrics);
+
+  const [candles, setCandles] = useState<Kline[]>([]);
+  const [trades, setTrades] = useState<TradeEntry[]>([]);
+  const [signals, setSignals] = useState<SignalEvent[]>([]);
+  const [readiness, setReadiness] = useState<number | null>(null);
+  const [logs, setLogs] = useState<string[]>([]);
+
+  const appendLog = useCallback((line: string) => {
+    setLogs((prev) => [...prev, line].slice(-200));
+  }, []);
+
+  // WebSocket handlers
+  const onMarket = useCallback(
+    (data: unknown) => {
+      const d = data as MarketSnapshot;
+      updateMarket(d);
+
+      // Extract trade from market update if it has trade data
+      if (d.last_price && d.timestamp) {
+        setTrades((prev) => {
+          const entry: TradeEntry = {
+            time: d.timestamp || new Date().toISOString(),
+            price: d.last_price,
+            size: Math.abs(d.volume_delta || 0.001),
+            side: (d.volume_delta ?? 0) >= 0 ? "buy" : "sell",
+            isLarge: Math.abs(d.volume_delta || 0) > 0.5,
+          };
+          return [...prev, entry].slice(-100);
+        });
+      }
+    },
+    [updateMarket],
+  );
+
+  const onSignal = useCallback(
+    (data: unknown) => {
+      const d = data as SignalSnapshot;
+      updateSignal(d);
+      const event: SignalEvent = {
+        timestamp: d.timestamp || new Date().toISOString(),
+        direction: d.direction,
+        confidence: d.confidence,
+        probability: d.probability,
+        alpha_score: d.alpha_score,
+        regime: d.regime,
+        strategy: d.strategy,
+      };
+      setSignals((prev) => [...prev, event].slice(-50));
+    },
+    [updateSignal],
+  );
+
+  const onPortfolio = useCallback(
+    (data: unknown) => {
+      updatePortfolio(data as never);
+    },
+    [updatePortfolio],
+  );
+
+  const onMetrics = useCallback(
+    (data: unknown) => {
+      updateMetrics(data as never);
+    },
+    [updateMetrics],
+  );
+
+  const wsState = useTerminalWebSocket(symbol, {
+    onMarket,
+    onSignal,
+    onPortfolio,
+    onMetrics,
+  });
+
+  // Fetch initial data
+  useEffect(() => {
+    let active = true;
+    apiService
+      .getMarketHistory(symbol, "1m", 300)
+      .then((data) => {
+        if (active) setCandles(data.candles ?? []);
+      })
+      .catch(() => {});
+
+    apiService
+      .getSystemReadiness()
+      .then((data) => {
+        if (active)
+          setReadiness(Number(data?.overall_score ?? data?.score ?? 0));
+      })
+      .catch(() => {
+        if (active) setReadiness(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [symbol]);
+
+  // Chart markers
+  const markers = useMemo(() => {
+    if (!signal || candles.length === 0) return [];
+    const t = candles[candles.length - 1].time;
+    if (signal.direction === "BUY") {
+      return [
+        {
+          time: t,
+          position: "belowBar" as const,
+          color: "#10b981",
+          text: "BUY",
+        },
+      ];
+    }
+    if (signal.direction === "SELL") {
+      return [
+        {
+          time: t,
+          position: "aboveBar" as const,
+          color: "#f43f5e",
+          text: "SELL",
+        },
+      ];
+    }
+    return [];
+  }, [candles, signal]);
+
+  const connectedCount = wsState.channels.filter((c) => c.connected).length;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
+      className="space-y-3"
+    >
+      {/* ═══════ HEADER BAR ═══════ */}
+      <TerminalCard
+        title="VISION AI — Institutional Terminal"
+        right={
+          <div className="flex items-center gap-3 text-xs">
+            <span
+              className={`rounded-full px-2 py-1 font-mono ${
+                connectedCount === 4
+                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                  : "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+              }`}
+            >
+              ⚡ {connectedCount}/4 LIVE
+            </span>
+            <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 py-1 font-mono text-cyan-200">
+              SCORE {readiness !== null ? readiness.toFixed(0) : "--"}
+            </span>
+          </div>
+        }
+      >
+        {/* Asset Selector */}
+        <div className="flex flex-wrap gap-2 mb-3">
+          {ASSETS.map((asset) => (
+            <button
+              key={asset}
+              onClick={() => setSymbol(asset)}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold tracking-wider transition ${
+                symbol === asset
+                  ? "border-cyan-400/50 bg-cyan-500/15 text-cyan-200 shadow-[0_0_15px_rgba(34,211,238,0.1)]"
+                  : "border-white/8 bg-slate-900/50 text-slate-400 hover:border-cyan-400/30 hover:text-slate-200"
+              }`}
+            >
+              {asset}
+            </button>
+          ))}
+        </div>
+
+        {/* Price Ticker Bar */}
+        <div className="grid grid-cols-4 gap-4 rounded-lg border border-white/6 bg-slate-900/40 p-3">
+          <PriceTicker value={market?.last_price ?? null} label="Last Price" />
+          <PriceTicker value={market?.spread_bps ?? null} label="Spread BPS" />
+          <PriceTicker
+            value={market?.order_book_imbalance ?? null}
+            label="OB Imbalance"
+          />
+          <PriceTicker
+            value={market?.volatility_expansion ?? null}
+            label="Vol Expansion"
+          />
+        </div>
+      </TerminalCard>
+
+      {/* ═══════ MAIN GRID ═══════ */}
+      <div className="grid gap-3 xl:grid-cols-12">
+        {/* Left Column — 8/12 */}
+        <div className="space-y-3 xl:col-span-8">
+          {/* Chart */}
+          <MarketChart candles={candles} markers={markers} />
+
+          {/* Middle row: Orderbook + Trade Flow */}
+          <div className="grid gap-3 lg:grid-cols-2">
+            <OrderbookPanel
+              bids={market?.bids ?? []}
+              asks={market?.asks ?? []}
+              lastPrice={market?.last_price ?? null}
+              imbalance={market?.order_book_imbalance ?? null}
+            />
+            <TradeFlowPanel trades={trades} />
+          </div>
+
+          {/* Operator Log */}
+          <TerminalCard title="Operator Log">
+            <div className="max-h-40 space-y-0 overflow-auto rounded-lg border border-white/6 bg-slate-950/55 p-2">
+              {logs.length === 0 && (
+                <p className="py-3 text-center text-[11px] text-slate-600">
+                  Terminal initialized. Awaiting data streams...
+                </p>
+              )}
+              {[...logs].reverse().map((line, i) => (
+                <p
+                  key={`log-${i}`}
+                  className="border-b border-white/3 py-0.5 font-mono text-[10px] text-slate-400 last:border-b-0"
+                >
+                  {line}
+                </p>
+              ))}
+            </div>
+          </TerminalCard>
+        </div>
+
+        {/* Right Column — 4/12 */}
+        <div className="space-y-3 xl:col-span-4">
+          <SignalPanel
+            signals={signals}
+            currentSignal={
+              signal
+                ? {
+                    timestamp: signal.timestamp,
+                    direction: signal.direction,
+                    confidence: signal.confidence,
+                    probability: signal.probability,
+                    alpha_score: signal.alpha_score,
+                    regime: signal.regime,
+                    strategy: signal.strategy,
+                  }
+                : null
+            }
+          />
+          <EngineStatusPanel
+            channels={wsState.channels}
+            reconnectCount={wsState.reconnectCount}
+            lastLatencyMs={wsState.lastLatencyMs}
+            messagesReceived={wsState.messagesReceived}
+            uptime={wsState.uptime}
+          />
+          <TradingPanel onExecutionLog={appendLog} />
+          <PortfolioPanel />
+        </div>
+      </div>
+    </motion.div>
+  );
+}

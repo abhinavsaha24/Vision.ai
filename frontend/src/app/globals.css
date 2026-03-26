@@ -1,0 +1,164 @@
+@import "tailwindcss";
+
+/* ──────────────────────────────────────────────
+   VISION AI — Institutional Trading Terminal
+   Design System: Dark + Neon + Glassmorphism
+   ────────────────────────────────────────────── */
+
+@theme {
+  --color-background: #020617;
+  --color-foreground: #e2e8f0;
+
+  /* neon accent palette */
+  --color-neon-cyan: #22d3ee;
+  --color-neon-blue: #3b82f6;
+  --color-neon-purple: #a855f7;
+  --color-neon-green: #10b981;
+  --color-neon-red: #f43f5e;
+  --color-neon-amber: #f59e0b;
+
+  /* surfaces */
+  --color-surface-primary: #0f172a;
+  --color-surface-elevated: #1e293b;
+  --color-surface-glass: rgba(15, 23, 42, 0.65);
+  --color-surface-card: rgba(15, 23, 42, 0.75);
+
+  /* borders */
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-border-default: rgba(255, 255, 255, 0.12);
+  --color-border-accent: rgba(34, 211, 238, 0.35);
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* ── Global Defaults ── */
+body {
+  background-color: #020617;
+  color: #e2e8f0;
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* ── Monospace ── */
+code, pre, .font-mono {
+  font-family: var(--font-jetbrains-mono), monospace;
+}
+
+/* ── Glassmorphism utility ── */
+.glass {
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-strong {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* ── Neon glow effects ── */
+.glow-cyan {
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.15),
+              0 0 60px rgba(34, 211, 238, 0.05);
+}
+
+.glow-purple {
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.15),
+              0 0 60px rgba(168, 85, 247, 0.05);
+}
+
+.glow-text-cyan {
+  text-shadow: 0 0 20px rgba(34, 211, 238, 0.5),
+               0 0 40px rgba(34, 211, 238, 0.2);
+}
+
+.glow-text-purple {
+  text-shadow: 0 0 20px rgba(168, 85, 247, 0.5),
+               0 0 40px rgba(168, 85, 247, 0.2);
+}
+
+/* ── Animated gradient background ── */
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+/* ── Pulse ring for status indicators ── */
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+.pulse-ring::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+/* ── Number tick flash ── */
+@keyframes flash-green {
+  0% { color: #10b981; }
+  100% { color: inherit; }
+}
+@keyframes flash-red {
+  0% { color: #f43f5e; }
+  100% { color: inherit; }
+}
+
+.tick-up {
+  animation: flash-green 0.6s ease-out;
+}
+.tick-down {
+  animation: flash-red 0.6s ease-out;
+}
+
+/* ── Floating particles ── */
+@keyframes float-particle {
+  0%, 100% { transform: translateY(0) translateX(0) scale(1); opacity: 0.3; }
+  25% { transform: translateY(-30px) translateX(10px) scale(1.1); opacity: 0.6; }
+  50% { transform: translateY(-15px) translateX(-10px) scale(0.95); opacity: 0.4; }
+  75% { transform: translateY(-40px) translateX(5px) scale(1.05); opacity: 0.5; }
+}
+
+/* ── Grid line pattern (terminal aesthetic) ── */
+.grid-pattern {
+  background-image:
+    linear-gradient(rgba(34, 211, 238, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 211, 238, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ── Selection styling ── */
+::selection {
+  background: rgba(34, 211, 238, 0.3);
+  color: #e2e8f0;
+}

@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vision-ai-backend
+  namespace: vision-ai
+  labels:
+    app.kubernetes.io/name: vision-ai-backend
+    app.kubernetes.io/component: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: vision-ai-backend
+  template:
+    metadata:
+      labels:
+        app: vision-ai-backend
+        app.kubernetes.io/name: vision-ai-backend
+        app.kubernetes.io/component: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/health"
+        prometheus.io/port: "10000"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: backend
+          image: vision-ai-backend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 10000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: vision-ai-config
+            - secretRef:
+                name: vision-ai-secrets
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2"
+              memory: "2Gi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: false
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 10000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 18
+          readinessProbe:
+            httpGet:
+              path: /system/readiness
+              port: 10000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 10000
+            initialDelaySeconds: 40
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vision-ai-backend
+  namespace: vision-ai
+  labels:
+    app.kubernetes.io/name: vision-ai-backend
+spec:
+  selector:
+    app: vision-ai-backend
+  ports:
+    - protocol: TCP
+      port: 10000
+      targetPort: 10000
+      name: http

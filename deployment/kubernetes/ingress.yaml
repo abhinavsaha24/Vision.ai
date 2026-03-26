@@ -1,0 +1,37 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vision-ai
+  namespace: vision-ai
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    nginx.ingress.kubernetes.io/websocket-services: vision-ai-backend
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: vision-ai.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: vision-ai-frontend
+                port:
+                  number: 3000
+    - host: api.vision-ai.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: vision-ai-backend
+                port:
+                  number: 10000
+  tls:
+    - hosts:
+        - vision-ai.example.com
+        - api.vision-ai.example.com
+      secretName: vision-ai-tls

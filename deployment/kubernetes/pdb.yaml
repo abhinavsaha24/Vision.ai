@@ -1,0 +1,21 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: vision-ai-backend-pdb
+  namespace: vision-ai
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: vision-ai-backend
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: vision-ai-frontend-pdb
+  namespace: vision-ai
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: vision-ai-frontend
