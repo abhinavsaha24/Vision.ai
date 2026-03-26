@@ -15,6 +15,7 @@ __pycache__/
 # logs
 /logs/
 *.log
+/.runtime/
 
 # data (root cache only, not backend/src/data/)
 /data/

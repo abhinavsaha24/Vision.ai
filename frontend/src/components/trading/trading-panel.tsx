@@ -12,6 +12,11 @@ interface TradingPanelProps {
 
 type MeResponse = { role?: string };
 type PaperStatusResponse = { running?: boolean; status?: string };
+type LiveReadinessResponse = {
+  all_ready?: boolean;
+  overall_score?: number;
+  blocked_reasons?: string[];
+};
 
 export function TradingPanel({ onExecutionLog }: TradingPanelProps) {
   const symbol = useMarketStore((state) => state.symbol);
@@ -25,6 +30,12 @@ export function TradingPanel({ onExecutionLog }: TradingPanelProps) {
   const [stoppingPaper, setStoppingPaper] = useState(false);
   const [killing, setKilling] = useState(false);
   const [resettingKill, setResettingKill] = useState(false);
+  const [enablingLive, setEnablingLive] = useState(false);
+  const [liveReady, setLiveReady] = useState<boolean | null>(null);
+  const [liveReadinessScore, setLiveReadinessScore] = useState<number | null>(
+    null,
+  );
+  const [liveBlockedReasons, setLiveBlockedReasons] = useState<string[]>([]);
 
   const executionBias = useMemo(() => {
     if (!signal) return "NEUTRAL";
@@ -40,23 +51,41 @@ export function TradingPanel({ onExecutionLog }: TradingPanelProps) {
 
     const refreshExecutionGuard = async () => {
       try {
-        const [me, paperStatus] = await Promise.all([
+        const [me, paperStatus, liveReadiness] = await Promise.all([
           apiService.getMe(),
           apiService.getPaperStatus(),
+          apiService.getLiveTradingReadiness(),
         ]);
 
         if (!active) return;
 
         const meData = me as MeResponse;
         const statusData = paperStatus as PaperStatusResponse;
+        const readinessData = liveReadiness as LiveReadinessResponse;
         const role = String(meData?.role ?? "").toLowerCase();
         const running =
           statusData?.running === true || statusData?.status === "running";
 
         setIsAdmin(role === "admin");
         setPaperRunning(running);
+        setLiveReady(Boolean(readinessData?.all_ready));
+        setLiveReadinessScore(
+          typeof readinessData?.overall_score === "number"
+            ? readinessData.overall_score
+            : null,
+        );
+        setLiveBlockedReasons(
+          Array.isArray(readinessData?.blocked_reasons)
+            ? readinessData.blocked_reasons
+            : [],
+        );
       } catch {
         if (!active) return;
+        setIsAdmin(false);
+        setPaperRunning(false);
+        setLiveReady(false);
+        setLiveReadinessScore(null);
+        setLiveBlockedReasons(["readiness_refresh_unavailable"]);
       }
     };
 
@@ -112,6 +141,31 @@ export function TradingPanel({ onExecutionLog }: TradingPanelProps) {
       className: "border-rose-400/40 bg-rose-500/10 text-rose-200",
     };
   }, [paperRunning, startingPaper, stoppingPaper]);
+
+  const liveStatusChip = useMemo(() => {
+    if (enablingLive) {
+      return {
+        label: "LIVE: ENABLING",
+        className: "border-cyan-400/40 bg-cyan-500/10 text-cyan-200",
+      };
+    }
+    if (liveReady === null) {
+      return {
+        label: "LIVE: CHECKING",
+        className: "border-slate-400/40 bg-slate-500/10 text-slate-200",
+      };
+    }
+    if (liveReady) {
+      return {
+        label: "LIVE: READY",
+        className: "border-emerald-400/40 bg-emerald-500/10 text-emerald-200",
+      };
+    }
+    return {
+      label: "LIVE: BLOCKED",
+      className: "border-rose-400/40 bg-rose-500/10 text-rose-200",
+    };
+  }, [enablingLive, liveReady]);
 
   const canExecute = !submitting && !executionGuardReason;
 
@@ -256,6 +310,32 @@ export function TradingPanel({ onExecutionLog }: TradingPanelProps) {
     }
   }
 
+  async function enableLiveTrading() {
+    setEnablingLive(true);
+    setError(null);
+    try {
+      const response = await apiService.enableLiveTrading();
+      setLiveReady(true);
+      onExecutionLog(
+        `${new Date().toISOString()}  LIVE_ENABLE ${symbol}  ${JSON.stringify(response)}`,
+      );
+    } catch (err) {
+      let message =
+        err instanceof Error ? err.message : "failed to enable live trading";
+      if (axios.isAxiosError(err)) {
+        const detail = err.response?.data as
+          | { detail?: string; error?: string; message?: string }
+          | undefined;
+        message =
+          detail?.detail || detail?.message || detail?.error || err.message;
+      }
+      setError(message);
+      onExecutionLog(`${new Date().toISOString()}  ERROR ${message}`);
+    } finally {
+      setEnablingLive(false);
+    }
+  }
+
   const paperControl = startingPaper
     ? {
         label: "Starting Paper Trading...",
@@ -294,6 +374,11 @@ export function TradingPanel({ onExecutionLog }: TradingPanelProps) {
             className={`rounded border px-2 py-0.5 text-[10px] font-semibold tracking-[0.08em] ${paperStatusChip.className}`}
           >
             {paperStatusChip.label}
+          </span>
+          <span
+            className={`rounded border px-2 py-0.5 text-[10px] font-semibold tracking-[0.08em] ${liveStatusChip.className}`}
+          >
+            {liveStatusChip.label}
           </span>
         </div>
       }
@@ -370,6 +455,36 @@ export function TradingPanel({ onExecutionLog }: TradingPanelProps) {
             >
               {paperControl.label}
             </button>
+            <button
+              disabled={
+                !liveReady ||
+                enablingLive ||
+                submitting ||
+                killing ||
+                resettingKill
+              }
+              onClick={enableLiveTrading}
+              title={
+                !liveReady && liveBlockedReasons.length > 0
+                  ? liveBlockedReasons.join(" | ")
+                  : undefined
+              }
+              className="w-full rounded-lg border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-sm font-semibold text-violet-200 transition hover:bg-violet-500/20 disabled:opacity-50"
+            >
+              {enablingLive
+                ? "Enabling Live Trading..."
+                : "Enable Live Trading"}
+            </button>
+            {liveReadinessScore !== null ? (
+              <p className="text-xs text-slate-400">
+                Live readiness score: {liveReadinessScore.toFixed(1)}
+              </p>
+            ) : null}
+            {!liveReady && liveBlockedReasons.length > 0 ? (
+              <p className="text-xs text-amber-300">
+                Live blockers: {liveBlockedReasons.join("; ")}
+              </p>
+            ) : null}
             <div className="grid grid-cols-2 gap-2">
               <button
                 disabled={submitting || killing || resettingKill}

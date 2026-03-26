@@ -139,6 +139,27 @@ This starts API + trading + risk + execution workers with Redis and Postgres, an
 
 Alternative local development mode (without Docker) uses two terminal windows.
 
+### One-Command Run Profiles (Second Pass)
+
+PowerShell run profiles are available for reliable mode switching:
+
+```powershell
+# Local-only mode (backend + frontend)
+./scripts/start_local_dev.ps1
+
+# Public demo mode (backend + frontend + two localtunnel sessions)
+./scripts/start_public_demo.ps1
+
+# Stop all processes started by the scripts above
+./scripts/stop_demo_sessions.ps1
+```
+
+What these profiles enforce:
+
+- Local mode keeps API and WS on loopback.
+- Public demo mode creates separate public URLs for frontend and backend, then injects backend `wss://` endpoint into frontend startup to keep realtime channels live.
+- PIDs are tracked in `.runtime/` for deterministic shutdown.
+
 ### Running the Backend
 
 In your first terminal (from the project root, with venv activated):
@@ -167,6 +188,8 @@ Set frontend runtime env in `frontend/.env.local`:
 NEXT_PUBLIC_API_URL=http://localhost:8080
 NEXT_PUBLIC_WS_URL=ws://localhost:8080
 ```
+
+For public demos, do not hardcode localhost WS URL in frontend startup. Use `scripts/start_public_demo.ps1` so frontend receives the tunnel-based backend `wss://` URL automatically.
 
 ---
 

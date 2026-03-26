@@ -67,6 +67,12 @@ export function MarketChart({
 
   useEffect(() => {
     if (!containerRef.current) return;
+    if (
+      containerRef.current.clientWidth <= 0 ||
+      containerRef.current.clientHeight <= 0
+    ) {
+      return;
+    }
 
     disposeChart();
 
@@ -162,7 +168,7 @@ export function MarketChart({
   }, [candles, markers, priceSeriesData, volumeSeriesData]);
 
   return (
-    <div className="relative h-115 w-full rounded-xl border border-white/10 bg-slate-950/70">
+    <div className="relative h-115 min-h-90 w-full rounded-xl border border-white/10 bg-slate-950/70">
       <div ref={containerRef} className="h-full w-full" />
       {market?.stale ? (
         <div className="absolute right-4 top-4 rounded-full border border-amber-500/50 bg-amber-500/10 px-3 py-1 text-xs text-amber-300">

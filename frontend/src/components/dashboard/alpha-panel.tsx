@@ -11,6 +11,8 @@ function metricColor(value: number) {
 
 export function AlphaPanel() {
   const signal = useMarketStore((state) => state.signal);
+  const regimeLabel =
+    signal?.regime || signal?.market_state || signal?.strategy || "INFERENCE";
 
   return (
     <TerminalCard title="Meta Alpha">
@@ -55,9 +57,7 @@ export function AlphaPanel() {
             <p className="text-xs uppercase tracking-[0.14em] text-slate-500">
               Regime
             </p>
-            <p className="mt-1 font-semibold text-slate-100">
-              {signal?.market_state ?? "UNKNOWN"}
-            </p>
+            <p className="mt-1 font-semibold text-slate-100">{regimeLabel}</p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-[0.14em] text-slate-500">

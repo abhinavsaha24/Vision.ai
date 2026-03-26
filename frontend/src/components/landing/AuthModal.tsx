@@ -67,13 +67,27 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
         const data = await apiService.login(email, password);
         const tokenValue = data.access_token || data.token;
         if (!tokenValue) throw new Error("Token missing in login response");
-        setSession(tokenValue, { email, role: "user" });
+        const me = (await apiService.getMeWithToken(tokenValue)) as {
+          email?: string;
+          role?: string;
+        };
+        setSession(tokenValue, {
+          email: me?.email || email,
+          role: me?.role || "user",
+        });
         setTimeout(onSuccess, 500);
       } else {
         const data = await apiService.login(email, password);
         const tokenValue = data.access_token || data.token;
         if (!tokenValue) throw new Error("Token missing in login response");
-        setSession(tokenValue, { email, role: "user" });
+        const me = (await apiService.getMeWithToken(tokenValue)) as {
+          email?: string;
+          role?: string;
+        };
+        setSession(tokenValue, {
+          email: me?.email || email,
+          role: me?.role || "user",
+        });
         onSuccess();
       }
     } catch (err) {

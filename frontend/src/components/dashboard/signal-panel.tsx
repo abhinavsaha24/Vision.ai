@@ -11,6 +11,7 @@ export interface SignalEvent {
   probability: number;
   alpha_score: number;
   regime: string;
+  market_state?: string;
   strategy: string;
 }
 
@@ -22,13 +23,13 @@ interface SignalPanelProps {
 function directionColor(dir: string) {
   if (dir === "BUY") return "text-emerald-400";
   if (dir === "SELL") return "text-rose-400";
-  return "text-slate-400";
+  return "text-slate-100";
 }
 
 function directionBg(dir: string) {
   if (dir === "BUY") return "bg-emerald-500/15 border-emerald-500/30";
   if (dir === "SELL") return "bg-rose-500/15 border-rose-500/30";
-  return "bg-slate-500/15 border-slate-500/30";
+  return "bg-slate-200/10 border-slate-300/30";
 }
 
 function confidenceBar(value: number) {
@@ -39,6 +40,9 @@ function confidenceBar(value: number) {
 }
 
 function SignalPanelInner({ signals, currentSignal }: SignalPanelProps) {
+  const regimeLabel =
+    currentSignal?.regime || currentSignal?.market_state || "INFERENCE";
+
   const formatTime = (ts: string) => {
     try {
       return new Date(ts).toLocaleTimeString("en-US", { hour12: false });
@@ -68,12 +72,16 @@ function SignalPanelInner({ signals, currentSignal }: SignalPanelProps) {
         <div className="mb-3 rounded-lg border border-white/8 bg-slate-900/50 p-3">
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div>
-              <span className="text-[10px] uppercase tracking-widest text-slate-500">Confidence</span>
+              <span className="text-[10px] uppercase tracking-widest text-slate-500">
+                Confidence
+              </span>
               <div className="mt-1 flex items-center gap-2">
                 <div className="h-1.5 flex-1 rounded-full bg-slate-800 overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all ${confidenceBar(currentSignal.confidence).color}`}
-                    style={{ width: `${confidenceBar(currentSignal.confidence).pct}%` }}
+                    style={{
+                      width: `${confidenceBar(currentSignal.confidence).pct}%`,
+                    }}
                   />
                 </div>
                 <span className="font-mono text-slate-200">
@@ -82,18 +90,26 @@ function SignalPanelInner({ signals, currentSignal }: SignalPanelProps) {
               </div>
             </div>
             <div>
-              <span className="text-[10px] uppercase tracking-widest text-slate-500">Alpha</span>
+              <span className="text-[10px] uppercase tracking-widest text-slate-500">
+                Alpha
+              </span>
               <p className="mt-1 font-mono text-sm text-cyan-300">
                 {currentSignal.alpha_score?.toFixed(4) ?? "--"}
               </p>
             </div>
             <div>
-              <span className="text-[10px] uppercase tracking-widest text-slate-500">Regime</span>
-              <p className="mt-1 text-slate-200">{currentSignal.regime || "--"}</p>
+              <span className="text-[10px] uppercase tracking-widest text-slate-500">
+                Regime
+              </span>
+              <p className="mt-1 text-slate-200">{regimeLabel}</p>
             </div>
             <div>
-              <span className="text-[10px] uppercase tracking-widest text-slate-500">Strategy</span>
-              <p className="mt-1 text-slate-200">{currentSignal.strategy || "--"}</p>
+              <span className="text-[10px] uppercase tracking-widest text-slate-500">
+                Strategy
+              </span>
+              <p className="mt-1 text-slate-200">
+                {currentSignal.strategy || "--"}
+              </p>
             </div>
           </div>
         </div>
@@ -109,20 +125,35 @@ function SignalPanelInner({ signals, currentSignal }: SignalPanelProps) {
         </div>
 
         {signals.length === 0 && (
-          <p className="py-4 text-center text-xs text-slate-600">No signals detected yet</p>
+          <p className="py-4 text-center text-xs text-slate-600">
+            No signals detected yet
+          </p>
         )}
 
-        {[...signals].reverse().slice(0, 20).map((sig, i) => (
-          <div
-            key={`sig-${i}`}
-            className="grid grid-cols-4 items-center py-[3px] text-[11px] font-mono border-b border-white/[0.03]"
-          >
-            <span className="text-slate-500">{formatTime(sig.timestamp)}</span>
-            <span className={directionColor(sig.direction)}>{sig.direction}</span>
-            <span className="text-right text-slate-300">{(sig.confidence * 100).toFixed(0)}%</span>
-            <span className="text-right text-cyan-400">{sig.alpha_score?.toFixed(3) ?? "--"}</span>
-          </div>
-        ))}
+        {[...signals]
+          .reverse()
+          .slice(0, 20)
+          .map((sig, i) => (
+            <div
+              key={`sig-${i}`}
+              className="grid grid-cols-4 items-center py-0.75 text-[11px] font-mono border-b border-white/3"
+            >
+              <span className="text-slate-500">
+                {formatTime(sig.timestamp)}
+              </span>
+              <span
+                className={`${directionColor(sig.direction)} ${sig.direction === "HOLD" ? "font-extrabold tracking-wide" : "font-semibold"}`}
+              >
+                {sig.direction}
+              </span>
+              <span className="text-right text-slate-300">
+                {(sig.confidence * 100).toFixed(0)}%
+              </span>
+              <span className="text-right text-cyan-400">
+                {sig.alpha_score?.toFixed(3) ?? "--"}
+              </span>
+            </div>
+          ))}
       </div>
     </TerminalCard>
   );

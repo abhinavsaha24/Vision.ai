@@ -15,6 +15,12 @@ interface WebSocketState {
   lastLatencyMs: number | null;
 }
 
+type TimestampPayload = {
+  timestamp?: string;
+  event_time?: string;
+  server_time?: string;
+};
+
 /**
  * Hook managing all 4 WebSocket channels for the trading terminal.
  * Provides connection status, message counts, and data handlers.
@@ -67,6 +73,24 @@ export function useTerminalWebSocket(
     }));
   }, []);
 
+  const updateLatency = useCallback((data: unknown) => {
+    const payload = data as TimestampPayload;
+    const rawTs =
+      payload?.timestamp || payload?.event_time || payload?.server_time;
+    if (!rawTs) return;
+
+    const sentAt = Date.parse(rawTs);
+    if (Number.isNaN(sentAt)) return;
+
+    const latency = Math.max(0, Date.now() - sentAt);
+    if (latency > 10 * 60 * 1000) return;
+
+    setState((prev) => ({
+      ...prev,
+      lastLatencyMs: latency,
+    }));
+  }, []);
+
   useEffect(() => {
     const marketCh = createRealtimeChannel({ channel: "market", symbol });
     const signalsCh = createRealtimeChannel({ channel: "signals", symbol });
@@ -76,18 +100,22 @@ export function useTerminalWebSocket(
     const unsubs = [
       marketCh.subscribe((data) => {
         incrementMessages();
+        updateLatency(data);
         handlersRef.current.onMarket?.(data);
       }),
       signalsCh.subscribe((data) => {
         incrementMessages();
+        updateLatency(data);
         handlersRef.current.onSignal?.(data);
       }),
       portfolioCh.subscribe((data) => {
         incrementMessages();
+        updateLatency(data);
         handlersRef.current.onPortfolio?.(data);
       }),
       metricsCh.subscribe((data) => {
         incrementMessages();
+        updateLatency(data);
         handlersRef.current.onMetrics?.(data);
       }),
       marketCh.subscribeStatus((connected) =>
@@ -121,7 +149,7 @@ export function useTerminalWebSocket(
       metricsCh.stop();
       window.clearInterval(uptimeTimer);
     };
-  }, [symbol, updateChannel, incrementMessages]);
+  }, [symbol, updateChannel, incrementMessages, updateLatency]);
 
   // Uptime calculation
   const uptime = formatUptime(uptimeMs);

@@ -2181,6 +2181,12 @@ async def _cache_get_json(svc: AppServices, key: str):
     return await asyncio.to_thread(svc.cache.get_json, key)
 
 
+async def _cache_set_json(svc: AppServices, key: str, value: Dict[str, Any], ttl: int):
+    if not svc.cache:
+        return
+    await asyncio.to_thread(svc.cache.set_json, key, value, ttl)
+
+
 async def _build_market_payload(svc: AppServices, symbol: Optional[str]) -> Dict:
     current_symbol = _normalize_symbol(symbol) or "BTCUSDT"
     if svc.realtime_feed:
@@ -2220,6 +2226,36 @@ async def _build_signals_payload(svc: AppServices, symbol: Optional[str]) -> Dic
             )
             if isinstance(latest, dict):
                 signal_data.update(latest)
+        except Exception:
+            pass
+
+    regime_value = str(signal_data.get("regime") or "").strip().upper()
+    market_state_value = str(signal_data.get("market_state") or "").strip().upper()
+    if regime_value in {"", "UNKNOWN"} or market_state_value in {"", "UNKNOWN"}:
+        try:
+            inferred = await _cache_get_json(svc, f"signal:inferred_regime:{current_symbol}")
+            if not isinstance(inferred, dict):
+                df = await asyncio.to_thread(_get_market_data, svc, current_symbol)
+                if isinstance(df, pd.DataFrame) and not df.empty and svc.regime_detector:
+                    regime = await asyncio.to_thread(svc.regime_detector.get_regime, df)
+                    if isinstance(regime, dict):
+                        inferred = {
+                            "regime": str(regime.get("label") or "").strip(),
+                            "market_state": str(regime.get("market_state") or "").strip(),
+                        }
+                        if inferred.get("regime") or inferred.get("market_state"):
+                            await _cache_set_json(
+                                svc,
+                                f"signal:inferred_regime:{current_symbol}",
+                                inferred,
+                                ttl=20,
+                            )
+
+            if isinstance(inferred, dict):
+                if inferred.get("regime"):
+                    signal_data["regime"] = inferred["regime"]
+                if inferred.get("market_state"):
+                    signal_data["market_state"] = inferred["market_state"]
         except Exception:
             pass
 

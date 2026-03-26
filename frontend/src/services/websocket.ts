@@ -19,19 +19,59 @@ export interface ChannelConfig {
 type Subscriber<T> = (payload: T) => void;
 type StatusSubscriber = (connected: boolean) => void;
 
+function isLoopbackHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return host === "localhost" || host === "127.0.0.1" || host === "::1";
+}
+
+function normalizeLoopbackBase(baseUrl: string): string {
+  if (typeof window === "undefined") return baseUrl;
+  try {
+    const parsed = new URL(baseUrl);
+    const browserHost = window.location.hostname;
+    if (isLoopbackHost(parsed.hostname) && isLoopbackHost(browserHost)) {
+      parsed.hostname = browserHost;
+      return parsed.toString().replace(/\/$/, "");
+    }
+    return baseUrl;
+  } catch {
+    return baseUrl;
+  }
+}
+
+function shouldRejectLoopbackCandidate(baseUrl: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const parsed = new URL(baseUrl);
+    const browserHost = window.location.hostname;
+    return !isLoopbackHost(browserHost) && isLoopbackHost(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
 function resolveWsBaseUrl(): string {
   const internal = process.env.NEXT_INTERNAL_WS_URL?.trim();
-  if (internal) return internal.replace(/\/$/, "");
+  if (internal) {
+    const candidate = normalizeLoopbackBase(internal.replace(/\/$/, ""));
+    if (!shouldRejectLoopbackCandidate(candidate)) return candidate;
+  }
 
   const configured = process.env.NEXT_PUBLIC_WS_URL;
-  if (configured && configured.trim()) return configured.replace(/\/$/, "");
+  if (configured && configured.trim()) {
+    const candidate = normalizeLoopbackBase(configured.replace(/\/$/, ""));
+    if (!shouldRejectLoopbackCandidate(candidate)) return candidate;
+  }
 
   const apiConfigured = process.env.NEXT_PUBLIC_API_URL;
   if (apiConfigured && apiConfigured.trim()) {
-    return apiConfigured
-      .replace(/^http:\/\//i, "ws://")
-      .replace(/^https:\/\//i, "wss://")
-      .replace(/\/$/, "");
+    const candidate = normalizeLoopbackBase(
+      apiConfigured
+        .replace(/^http:\/\//i, "ws://")
+        .replace(/^https:\/\//i, "wss://")
+        .replace(/\/$/, ""),
+    );
+    if (!shouldRejectLoopbackCandidate(candidate)) return candidate;
   }
 
   if (typeof window !== "undefined" && window.location) {

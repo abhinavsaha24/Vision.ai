@@ -158,6 +158,15 @@ export const apiService = {
     return data;
   },
 
+  async getMeWithToken(token: string) {
+    const { data } = await apiClient.get("/auth/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return data;
+  },
+
   async getHealth() {
     const { data } = await apiClient.get("/health");
     return data;
@@ -216,6 +225,16 @@ export const apiService = {
 
   async stopPaperTrading() {
     const { data } = await apiClient.post("/paper-trading/stop");
+    return data;
+  },
+
+  async getLiveTradingReadiness() {
+    const { data } = await apiClient.get("/live-trading/readiness");
+    return data;
+  },
+
+  async enableLiveTrading() {
+    const { data } = await apiClient.post("/live-trading/enable");
     return data;
   },
 

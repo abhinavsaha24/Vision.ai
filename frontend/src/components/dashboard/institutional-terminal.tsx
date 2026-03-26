@@ -69,6 +69,14 @@ export function InstitutionalTerminal() {
   const [signals, setSignals] = useState<SignalEvent[]>([]);
   const [readiness, setReadiness] = useState<number | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
+  const [liveClock, setLiveClock] = useState(() =>
+    new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    }),
+  );
 
   const appendLog = useCallback((line: string) => {
     setLogs((prev) => [...prev, line].slice(-200));
@@ -108,6 +116,7 @@ export function InstitutionalTerminal() {
         probability: d.probability,
         alpha_score: d.alpha_score,
         regime: d.regime,
+        market_state: d.market_state,
         strategy: d.strategy,
       };
       setSignals((prev) => [...prev, event].slice(-50));
@@ -161,6 +170,23 @@ export function InstitutionalTerminal() {
     };
   }, [symbol]);
 
+  useEffect(() => {
+    const timerId = window.setInterval(() => {
+      setLiveClock(
+        new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false,
+        }),
+      );
+    }, 1000);
+
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, []);
+
   // Chart markers
   const markers = useMemo(() => {
     if (!signal || candles.length === 0) return [];
@@ -202,6 +228,9 @@ export function InstitutionalTerminal() {
         title="VISION AI — Institutional Terminal"
         right={
           <div className="flex items-center gap-3 text-xs">
+            <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-1 font-mono text-amber-200">
+              {liveClock}
+            </span>
             <span
               className={`rounded-full px-2 py-1 font-mono ${
                 connectedCount === 4
