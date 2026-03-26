@@ -59,6 +59,16 @@ class _MemoryStore:
     def set(self, key: str, value: str):
         self._store[key] = (0, value)
 
+    def setnx(self, key: str, value: str, ttl: int = 0) -> bool:
+        existing = self.get(key)
+        if existing is not None:
+            return False
+        if ttl and ttl > 0:
+            self.setex(key, ttl, value)
+        else:
+            self.set(key, value)
+        return True
+
     def delete(self, key: str):
         self._store.pop(key, None)
 
@@ -131,6 +141,26 @@ class RedisCache:
             return True
         except Exception as e:
             logger.warning("Cache set error: %s", e)
+            return False
+
+    def set_if_absent(self, key: str, value: str, ttl: Optional[int] = None) -> bool:
+        """Set key only when absent. Returns True if created, False if key exists."""
+        effective_ttl = ttl or self.default_ttl
+        try:
+            # Redis atomic NX path.
+            if self.enabled and REDIS_AVAILABLE:
+                created = self._client.set(key, value, ex=effective_ttl, nx=True)
+                return bool(created)
+
+            # In-memory fallback path.
+            if hasattr(self._client, "setnx"):
+                return bool(self._client.setnx(key, value, effective_ttl))
+
+            if self.get(key) is not None:
+                return False
+            return self.set(key, value, ttl=effective_ttl)
+        except Exception as e:
+            logger.warning("Cache set_if_absent error: %s", e)
             return False
 
     # ---- JSON helpers ----

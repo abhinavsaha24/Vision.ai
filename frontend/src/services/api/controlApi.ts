@@ -99,14 +99,24 @@ export const controlApi = {
   },
 
   async runManual(side: "buy" | "sell", symbol: string, sizeUsd: number) {
+    const key = apiService.generateIdempotencyKey(`control-${side}`);
     if (side === "buy") {
-      return apiService.manualBuy(symbol, sizeUsd);
+      return apiService.manualBuy(symbol, sizeUsd, key);
     }
-    return apiService.manualSell(symbol, sizeUsd);
+    return apiService.manualSell(symbol, sizeUsd, key);
   },
 
   async closePosition(symbol: string) {
-    return apiService.closePosition(symbol);
+    const key = apiService.generateIdempotencyKey("control-close");
+    return apiService.closePosition(symbol, key);
+  },
+
+  async emergencyKill(reason = "manual_terminal_override") {
+    return apiService.emergencyKill(reason);
+  },
+
+  async emergencyKillReset() {
+    return apiService.emergencyKillReset();
   },
 
   async getOrders(limit = 120) {

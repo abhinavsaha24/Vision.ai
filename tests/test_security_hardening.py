@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from types import SimpleNamespace
 
 from fastapi import HTTPException
 from fastapi.responses import Response
@@ -280,3 +281,195 @@ def test_validate_security_accepts_secure_live_configuration() -> None:
         binance_secret="secret",
     )
     settings.validate_security()
+
+
+class _CacheStub:
+    def __init__(self) -> None:
+        self.data: dict[str, object] = {}
+        self.locks: set[str] = set()
+        self.force_lock_fail = False
+
+    def get_json(self, key: str):
+        return self.data.get(key)
+
+    def set_json(self, key: str, value, ttl: int = 0) -> bool:
+        self.data[key] = value
+        return True
+
+    def set_if_absent(self, key: str, _value: str, ttl: int = 0) -> bool:
+        if self.force_lock_fail:
+            return False
+        if key in self.locks:
+            return False
+        self.locks.add(key)
+        return True
+
+    def delete(self, key: str) -> None:
+        self.locks.discard(key)
+
+
+class _FetcherStub:
+    def fetch(self, _symbol: str):
+        return {"close": [100.0]}
+
+
+class _ColumnStub:
+    def __init__(self, values):
+        self.values = values
+
+    @property
+    def iloc(self):
+        return self
+
+    def __getitem__(self, idx: int):
+        return self.values[idx]
+
+
+class _FrameStub:
+    empty = False
+
+    def __init__(self, close: float):
+        self._close = close
+
+    def __getitem__(self, key: str):
+        if key == "close":
+            return _ColumnStub([self._close])
+        raise KeyError(key)
+
+
+class _FetcherFrameStub:
+    def fetch(self, _symbol: str):
+        return _FrameStub(100.0)
+
+
+class _OrderManagerStub:
+    def submit_market_order(self, symbol: str, side: str, quantity: float, price: float):
+        return SimpleNamespace(
+            status="filled",
+            order_id=f"{symbol}-{side}-1",
+            filled_price=price,
+            error=None,
+        )
+
+    def cancel_all(self):
+        return 3
+
+
+class _PortfolioManagerStub:
+    def __init__(self) -> None:
+        self.closed: list[tuple[str, float]] = []
+
+    def open_position(self, **_kwargs):
+        return None
+
+    def close_position(self, symbol: str, price: float):
+        self.closed.append((symbol, price))
+
+    def get_portfolio(self):
+        return {
+            "positions": {
+                "BTCUSDT": {"quantity": 1.5, "side": "long"},
+            }
+        }
+
+
+class _RiskManagerStub:
+    def __init__(self) -> None:
+        self.kill_activated = False
+        self.kill_deactivated = False
+        self.last_reason = ""
+
+    def activate_kill_switch(self, reason: str = ""):
+        self.kill_activated = True
+        self.last_reason = reason
+
+    def deactivate_kill_switch(self):
+        self.kill_deactivated = True
+
+
+def _build_api_request_with_services(services) -> Request:
+    app = SimpleNamespace(state=SimpleNamespace(services=services))
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/",
+        "headers": [],
+        "app": app,
+    }
+    return Request(scope)
+
+
+def test_manual_buy_replays_cached_idempotent_result(monkeypatch) -> None:
+    cache = _CacheStub()
+    replay_key = "manual_trade:result:BTCUSDT:buy:key-12345678"
+    cache.data[replay_key] = {"order_id": "cached-order"}
+
+    services = SimpleNamespace(
+        paper_trader=SimpleNamespace(execution=SimpleNamespace(order_manager=_OrderManagerStub())),
+        cache=cache,
+        fetcher=_FetcherFrameStub(),
+        portfolio_manager=_PortfolioManagerStub(),
+    )
+    req = _build_api_request_with_services(services)
+    body = main.ManualTradeRequest(
+        symbol="BTCUSDT",
+        side="buy",
+        size_usd=250.0,
+        idempotency_key="key-12345678",
+    )
+
+    monkeypatch.setattr(main, "_audit_action", lambda **_kwargs: None)
+
+    result = asyncio.run(main.manual_buy(req, body, {"user_id": 1}))
+
+    assert result["idempotent_replay"] is True
+    assert result["order"]["order_id"] == "cached-order"
+
+
+def test_manual_buy_rejects_when_symbol_lock_exists(monkeypatch) -> None:
+    cache = _CacheStub()
+    cache.force_lock_fail = True
+    services = SimpleNamespace(
+        paper_trader=SimpleNamespace(execution=SimpleNamespace(order_manager=_OrderManagerStub())),
+        cache=cache,
+        fetcher=_FetcherFrameStub(),
+        portfolio_manager=_PortfolioManagerStub(),
+    )
+    req = _build_api_request_with_services(services)
+    body = main.ManualTradeRequest(
+        symbol="BTCUSDT",
+        side="buy",
+        size_usd=250.0,
+        idempotency_key="key-87654321",
+    )
+
+    monkeypatch.setattr(main, "_audit_action", lambda **_kwargs: None)
+
+    try:
+        asyncio.run(main.manual_buy(req, body, {"user_id": 1}))
+        raise AssertionError("Expected HTTPException for concurrent lock")
+    except HTTPException as exc:
+        assert exc.status_code == 409
+        assert "Trade already in progress" in str(exc.detail)
+
+
+def test_emergency_kill_and_reset_toggle_risk_manager(monkeypatch) -> None:
+    risk = _RiskManagerStub()
+    services = SimpleNamespace(
+        risk_manager=risk,
+        paper_trader=SimpleNamespace(execution=SimpleNamespace(order_manager=_OrderManagerStub())),
+    )
+    req = _build_api_request_with_services(services)
+
+    monkeypatch.setattr(main, "_audit_action", lambda **_kwargs: None)
+
+    kill_result = asyncio.run(main.emergency_kill(req, "incident_test", {"user_id": 9}))
+    reset_result = asyncio.run(main.emergency_kill_reset(req, {"user_id": 9}))
+
+    assert kill_result["status"] == "kill_switch_activated"
+    assert kill_result["cancelled_orders"] == 3
+    assert risk.kill_activated is True
+    assert risk.last_reason == "incident_test"
+
+    assert reset_result["status"] == "kill_switch_deactivated"
+    assert risk.kill_deactivated is True

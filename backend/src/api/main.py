@@ -37,6 +37,7 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import time
@@ -63,7 +64,9 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from backend.src.api.admin_routes import router as admin_router
 from backend.src.api.auth_routes import router as auth_router
-from backend.src.database.db import init_db, ConnectionPoolManager, get_connection, release_connection
+from backend.src.database.db import (ConnectionPoolManager, get_connection,
+                                     init_db, is_postgres_connection,
+                                     release_connection)
 from backend.src.auth.auth_service import get_current_user, require_admin
 # Lightweight imports only — these don't trigger heavy computation
 from backend.src.core.config import settings
@@ -526,13 +529,79 @@ class ManualTradeRequest(BaseModel):
     symbol: str = Field(default="BTC/USDT", max_length=20)
     side: str = Field(default="buy", pattern="^(buy|sell)$")
     size_usd: float = Field(default=100.0, gt=0)
+    idempotency_key: str = Field(min_length=8, max_length=128)
 
 
 class ClosePositionRequest(BaseModel):
     symbol: str = Field(default="BTC/USDT", max_length=20)
+    idempotency_key: str = Field(min_length=8, max_length=128)
 # --------------------------------------------------
 # Internal helpers
 # --------------------------------------------------
+
+
+MANUAL_TRADE_LOCK_TTL_SECONDS = 5
+MANUAL_TRADE_IDEMPOTENCY_TTL_SECONDS = 15 * 60
+
+
+def _normalize_symbol(symbol: str) -> str:
+    return (symbol or "").strip().upper().replace("/", "")
+
+
+def _audit_action(
+    action: str,
+    status: str,
+    details: Dict[str, Any],
+    request: Optional[Request] = None,
+    user_id: Optional[int] = None,
+) -> None:
+    """Best-effort audit logging for security-critical actions."""
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        request_id = None
+        if request is not None:
+            request_id = request.headers.get("X-Request-ID")
+
+        payload = json.dumps(details, default=str)
+        if is_postgres_connection(conn):
+            cursor.execute(
+                """
+                INSERT INTO audit_log (user_id, action, status, details_json, request_id)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                (user_id, action, status, payload, request_id),
+            )
+        else:
+            cursor.execute(
+                """
+                INSERT INTO audit_log (user_id, action, status, details_json, request_id)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (user_id, action, status, payload, request_id),
+            )
+        conn.commit()
+    except Exception as exc:
+        if conn is not None:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        logger.warning("Audit log write failed for %s: %s", action, exc)
+    finally:
+        if conn is not None:
+            try:
+                release_connection(conn)
+            except Exception:
+                pass
+
+
+def _manual_trade_keys(symbol: str, side: str, idempotency_key: str) -> tuple[str, str]:
+    symbol_key = _normalize_symbol(symbol)
+    lock_key = f"manual_trade:lock:{symbol_key}"
+    replay_key = f"manual_trade:result:{symbol_key}:{side.lower()}:{idempotency_key}"
+    return lock_key, replay_key
 
 
 def _get_market_data(svc: AppServices, symbol: str):
@@ -1594,21 +1663,99 @@ async def system_meta_alpha(
 
 
 @app.post("/live-trading/enable", dependencies=[Depends(require_admin)])
-async def enable_live_trading(request: Request):
+async def enable_live_trading(
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+):
     """Enable live trading (requires all pre-flight checks to pass)."""
     svc = _svc(request)
     readiness = _build_live_readiness_report(svc)
 
     if not readiness.get("all_ready", False):
+        _audit_action(
+            action="live_trading_enable",
+            status="denied",
+            details={"blocked_reasons": readiness.get("blocked_reasons", [])},
+            request=request,
+            user_id=current_user.get("user_id"),
+        )
         raise HTTPException(
             403, f"Live readiness gate failed: {readiness.get('blocked_reasons', [])}"
         )
 
-    return {
+    response = {
         "status": "live_trading_ready",
         "message": "Live readiness gate passed. System is eligible for live order flow.",
         "readiness_score": readiness.get("overall_score", 0),
     }
+    _audit_action(
+        action="live_trading_enable",
+        status="success",
+        details=response,
+        request=request,
+        user_id=current_user.get("user_id"),
+    )
+    return response
+
+
+@app.post("/emergency/kill", dependencies=[Depends(require_admin)])
+async def emergency_kill(
+    request: Request,
+    reason: str = "manual_emergency",
+    current_user: dict = Depends(get_current_user),
+):
+    """Emergency stop: activate kill switch and cancel all active paper orders."""
+    svc = _svc(request)
+    if svc.risk_manager and hasattr(svc.risk_manager, "activate_kill_switch"):
+        svc.risk_manager.activate_kill_switch(reason=reason)
+
+    cancelled_orders = 0
+    try:
+        if svc.paper_trader and getattr(svc.paper_trader, "execution", None):
+            manager = getattr(svc.paper_trader.execution, "order_manager", None)
+            if manager is not None and hasattr(manager, "cancel_all"):
+                cancelled_orders = int(manager.cancel_all())
+    except Exception as exc:
+        logger.warning("Emergency kill cancel_all warning: %s", exc)
+
+    response = {
+        "status": "kill_switch_activated",
+        "reason": reason,
+        "cancelled_orders": cancelled_orders,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    _audit_action(
+        action="emergency_kill",
+        status="critical",
+        details=response,
+        request=request,
+        user_id=current_user.get("user_id"),
+    )
+    return response
+
+
+@app.post("/emergency/kill/reset", dependencies=[Depends(require_admin)])
+async def emergency_kill_reset(
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+):
+    """Reset kill switch after manual verification and incident handling."""
+    svc = _svc(request)
+    if svc.risk_manager and hasattr(svc.risk_manager, "deactivate_kill_switch"):
+        svc.risk_manager.deactivate_kill_switch()
+
+    response = {
+        "status": "kill_switch_deactivated",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    _audit_action(
+        action="emergency_kill_reset",
+        status="warning",
+        details=response,
+        request=request,
+        user_id=current_user.get("user_id"),
+    )
+    return response
 
 
 # ==================================================
@@ -1616,7 +1763,11 @@ async def enable_live_trading(request: Request):
 # ==================================================
 
 @app.post("/trading/buy", dependencies=[Depends(require_admin)])
-async def manual_buy(request: Request, body: ManualTradeRequest):
+async def manual_buy(
+    request: Request,
+    body: ManualTradeRequest,
+    current_user: dict = Depends(get_current_user),
+):
     """Execute a manual buy order."""
     svc = _svc(request)
     if not svc.paper_trader:
@@ -1626,6 +1777,21 @@ async def manual_buy(request: Request, body: ManualTradeRequest):
     if execution is None or order_manager is None:
         raise HTTPException(status_code=400, detail="Trading execution not available")
         
+    lock_key, replay_key = _manual_trade_keys(body.symbol, "buy", body.idempotency_key)
+    replay = svc.cache.get_json(replay_key) if svc.cache else None
+    if replay is not None:
+        return {
+            "status": "success",
+            "message": "Buy order replayed from idempotent cache",
+            "idempotent_replay": True,
+            "order": replay,
+        }
+
+    if svc.cache and not svc.cache.set_if_absent(
+        lock_key, body.idempotency_key, ttl=MANUAL_TRADE_LOCK_TTL_SECONDS
+    ):
+        raise HTTPException(status_code=409, detail="Trade already in progress for symbol")
+
     try:
         df = svc.fetcher.fetch(body.symbol)
         if df is None or df.empty:
@@ -1639,26 +1805,69 @@ async def manual_buy(request: Request, body: ManualTradeRequest):
         )
         
         if order.status == "filled":
+            order_dict = dict(order.__dict__)
+            order_dict["idempotency_key"] = body.idempotency_key
             svc.portfolio_manager.open_position(
                 symbol=body.symbol,
                 side="long",
                 quantity=quantity,
                 price=order.filled_price,
                 strategy_name="manual",
-                metadata={"source": "manual"},
+                metadata={
+                    "source": "manual",
+                    "idempotency_key": body.idempotency_key,
+                },
             )
-            return {"status": "success", "message": "Buy order executed", "order": order.__dict__}
+            if svc.cache:
+                svc.cache.set_json(
+                    replay_key,
+                    order_dict,
+                    ttl=MANUAL_TRADE_IDEMPOTENCY_TTL_SECONDS,
+                )
+            _audit_action(
+                action="manual_buy",
+                status="success",
+                details={
+                    "symbol": body.symbol,
+                    "size_usd": body.size_usd,
+                    "quantity": quantity,
+                    "idempotency_key": body.idempotency_key,
+                    "order_id": order.order_id,
+                },
+                request=request,
+                user_id=current_user.get("user_id"),
+            )
+            return {"status": "success", "message": "Buy order executed", "order": order_dict}
         else:
             raise HTTPException(status_code=400, detail=f"Order rejected: {order.error}")
     except HTTPException:
         raise
     except Exception as e:
         logger.error("Error executing manual buy: %s", e)
+        _audit_action(
+            action="manual_buy",
+            status="error",
+            details={
+                "symbol": body.symbol,
+                "size_usd": body.size_usd,
+                "idempotency_key": body.idempotency_key,
+                "error": str(e),
+            },
+            request=request,
+            user_id=current_user.get("user_id"),
+        )
         raise HTTPException(status_code=500, detail="Manual buy failed")
+    finally:
+        if svc.cache:
+            svc.cache.delete(lock_key)
 
 
 @app.post("/trading/sell", dependencies=[Depends(require_admin)])
-async def manual_sell(request: Request, body: ManualTradeRequest):
+async def manual_sell(
+    request: Request,
+    body: ManualTradeRequest,
+    current_user: dict = Depends(get_current_user),
+):
     """Execute a manual sell (short) order."""
     svc = _svc(request)
     if not svc.paper_trader:
@@ -1668,6 +1877,21 @@ async def manual_sell(request: Request, body: ManualTradeRequest):
     if execution is None or order_manager is None:
         raise HTTPException(status_code=400, detail="Trading execution not available")
         
+    lock_key, replay_key = _manual_trade_keys(body.symbol, "sell", body.idempotency_key)
+    replay = svc.cache.get_json(replay_key) if svc.cache else None
+    if replay is not None:
+        return {
+            "status": "success",
+            "message": "Sell order replayed from idempotent cache",
+            "idempotent_replay": True,
+            "order": replay,
+        }
+
+    if svc.cache and not svc.cache.set_if_absent(
+        lock_key, body.idempotency_key, ttl=MANUAL_TRADE_LOCK_TTL_SECONDS
+    ):
+        raise HTTPException(status_code=409, detail="Trade already in progress for symbol")
+
     try:
         df = svc.fetcher.fetch(body.symbol)
         if df is None or df.empty:
@@ -1681,26 +1905,69 @@ async def manual_sell(request: Request, body: ManualTradeRequest):
         )
         
         if order.status == "filled":
+            order_dict = dict(order.__dict__)
+            order_dict["idempotency_key"] = body.idempotency_key
             svc.portfolio_manager.open_position(
                 symbol=body.symbol,
                 side="short",
                 quantity=quantity,
                 price=order.filled_price,
                 strategy_name="manual",
-                metadata={"source": "manual"},
+                metadata={
+                    "source": "manual",
+                    "idempotency_key": body.idempotency_key,
+                },
             )
-            return {"status": "success", "message": "Sell order executed", "order": order.__dict__}
+            if svc.cache:
+                svc.cache.set_json(
+                    replay_key,
+                    order_dict,
+                    ttl=MANUAL_TRADE_IDEMPOTENCY_TTL_SECONDS,
+                )
+            _audit_action(
+                action="manual_sell",
+                status="success",
+                details={
+                    "symbol": body.symbol,
+                    "size_usd": body.size_usd,
+                    "quantity": quantity,
+                    "idempotency_key": body.idempotency_key,
+                    "order_id": order.order_id,
+                },
+                request=request,
+                user_id=current_user.get("user_id"),
+            )
+            return {"status": "success", "message": "Sell order executed", "order": order_dict}
         else:
             raise HTTPException(status_code=400, detail=f"Order rejected: {order.error}")
     except HTTPException:
         raise
     except Exception as e:
         logger.error("Error executing manual sell: %s", e)
+        _audit_action(
+            action="manual_sell",
+            status="error",
+            details={
+                "symbol": body.symbol,
+                "size_usd": body.size_usd,
+                "idempotency_key": body.idempotency_key,
+                "error": str(e),
+            },
+            request=request,
+            user_id=current_user.get("user_id"),
+        )
         raise HTTPException(status_code=500, detail="Manual sell failed")
+    finally:
+        if svc.cache:
+            svc.cache.delete(lock_key)
 
 
 @app.post("/trading/close", dependencies=[Depends(require_admin)])
-async def manual_close(request: Request, body: ClosePositionRequest):
+async def manual_close(
+    request: Request,
+    body: ClosePositionRequest,
+    current_user: dict = Depends(get_current_user),
+):
     """Close an open position."""
     svc = _svc(request)
     if not svc.paper_trader:
@@ -1715,6 +1982,21 @@ async def manual_close(request: Request, body: ClosePositionRequest):
     if not position:
         raise HTTPException(status_code=404, detail="No open position for symbol")
         
+    lock_key, replay_key = _manual_trade_keys(body.symbol, "close", body.idempotency_key)
+    replay = svc.cache.get_json(replay_key) if svc.cache else None
+    if replay is not None:
+        return {
+            "status": "success",
+            "message": "Close order replayed from idempotent cache",
+            "idempotent_replay": True,
+            "order": replay,
+        }
+
+    if svc.cache and not svc.cache.set_if_absent(
+        lock_key, body.idempotency_key, ttl=MANUAL_TRADE_LOCK_TTL_SECONDS
+    ):
+        raise HTTPException(status_code=409, detail="Trade already in progress for symbol")
+
     try:
         df = svc.fetcher.fetch(body.symbol)
         if df is None or df.empty:
@@ -1729,15 +2011,49 @@ async def manual_close(request: Request, body: ClosePositionRequest):
         )
         
         if order.status == "filled":
+            order_dict = dict(order.__dict__)
+            order_dict["idempotency_key"] = body.idempotency_key
             svc.portfolio_manager.close_position(symbol=body.symbol, price=order.filled_price)
-            return {"status": "success", "message": "Position closed", "order": order.__dict__}
+            if svc.cache:
+                svc.cache.set_json(
+                    replay_key,
+                    order_dict,
+                    ttl=MANUAL_TRADE_IDEMPOTENCY_TTL_SECONDS,
+                )
+            _audit_action(
+                action="manual_close",
+                status="success",
+                details={
+                    "symbol": body.symbol,
+                    "quantity": quantity,
+                    "idempotency_key": body.idempotency_key,
+                    "order_id": order.order_id,
+                },
+                request=request,
+                user_id=current_user.get("user_id"),
+            )
+            return {"status": "success", "message": "Position closed", "order": order_dict}
         else:
             raise HTTPException(status_code=400, detail=f"Order rejected: {order.error}")
     except HTTPException:
         raise
     except Exception as e:
         logger.error("Error executing manual close: %s", e)
+        _audit_action(
+            action="manual_close",
+            status="error",
+            details={
+                "symbol": body.symbol,
+                "idempotency_key": body.idempotency_key,
+                "error": str(e),
+            },
+            request=request,
+            user_id=current_user.get("user_id"),
+        )
         raise HTTPException(status_code=500, detail="Manual close failed")
+    finally:
+        if svc.cache:
+            svc.cache.delete(lock_key)
 
 
 # ==================================================

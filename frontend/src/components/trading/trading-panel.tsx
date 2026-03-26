@@ -23,6 +23,8 @@ export function TradingPanel({ onExecutionLog }: TradingPanelProps) {
   const [paperRunning, setPaperRunning] = useState<boolean | null>(null);
   const [startingPaper, setStartingPaper] = useState(false);
   const [stoppingPaper, setStoppingPaper] = useState(false);
+  const [killing, setKilling] = useState(false);
+  const [resettingKill, setResettingKill] = useState(false);
 
   const executionBias = useMemo(() => {
     if (!signal) return "NEUTRAL";
@@ -122,14 +124,17 @@ export function TradingPanel({ onExecutionLog }: TradingPanelProps) {
     setSubmitting(true);
     setError(null);
     try {
+      const idempotencyKey = apiService.generateIdempotencyKey(action);
       let response: unknown;
       if (action === "buy")
-        response = await apiService.manualBuy(symbol, sizeUsd);
+        response = await apiService.manualBuy(symbol, sizeUsd, idempotencyKey);
       if (action === "sell")
-        response = await apiService.manualSell(symbol, sizeUsd);
-      if (action === "close") response = await apiService.closePosition(symbol);
+        response = await apiService.manualSell(symbol, sizeUsd, idempotencyKey);
+      if (action === "close") {
+        response = await apiService.closePosition(symbol, idempotencyKey);
+      }
       onExecutionLog(
-        `${new Date().toISOString()}  ${action.toUpperCase()} ${symbol}  ${JSON.stringify(response)}`,
+        `${new Date().toISOString()}  ${action.toUpperCase()} ${symbol} [${idempotencyKey}] ${JSON.stringify(response)}`,
       );
     } catch (err) {
       let message = err instanceof Error ? err.message : "execution failed";
@@ -144,6 +149,58 @@ export function TradingPanel({ onExecutionLog }: TradingPanelProps) {
       onExecutionLog(`${new Date().toISOString()}  ERROR ${message}`);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function triggerEmergencyKill() {
+    setKilling(true);
+    setError(null);
+    try {
+      const response = await apiService.emergencyKill(
+        "manual_terminal_override",
+      );
+      onExecutionLog(
+        `${new Date().toISOString()}  EMERGENCY_KILL ${symbol}  ${JSON.stringify(response)}`,
+      );
+    } catch (err) {
+      let message =
+        err instanceof Error ? err.message : "failed to activate kill switch";
+      if (axios.isAxiosError(err)) {
+        const detail = err.response?.data as
+          | { detail?: string; error?: string; message?: string }
+          | undefined;
+        message =
+          detail?.detail || detail?.message || detail?.error || err.message;
+      }
+      setError(message);
+      onExecutionLog(`${new Date().toISOString()}  ERROR ${message}`);
+    } finally {
+      setKilling(false);
+    }
+  }
+
+  async function triggerEmergencyReset() {
+    setResettingKill(true);
+    setError(null);
+    try {
+      const response = await apiService.emergencyKillReset();
+      onExecutionLog(
+        `${new Date().toISOString()}  EMERGENCY_RESET ${symbol}  ${JSON.stringify(response)}`,
+      );
+    } catch (err) {
+      let message =
+        err instanceof Error ? err.message : "failed to reset kill switch";
+      if (axios.isAxiosError(err)) {
+        const detail = err.response?.data as
+          | { detail?: string; error?: string; message?: string }
+          | undefined;
+        message =
+          detail?.detail || detail?.message || detail?.error || err.message;
+      }
+      setError(message);
+      onExecutionLog(`${new Date().toISOString()}  ERROR ${message}`);
+    } finally {
+      setResettingKill(false);
     }
   }
 
@@ -299,13 +356,37 @@ export function TradingPanel({ onExecutionLog }: TradingPanelProps) {
           <p className="text-xs text-amber-300">{executionGuardReason}</p>
         ) : null}
         {isAdmin ? (
-          <button
-            disabled={stoppingPaper || startingPaper || submitting}
-            onClick={paperControl.onClick}
-            className={`w-full rounded-lg border px-3 py-2 text-sm font-semibold transition disabled:opacity-50 ${paperControl.className}`}
-          >
-            {paperControl.label}
-          </button>
+          <>
+            <button
+              disabled={
+                stoppingPaper ||
+                startingPaper ||
+                submitting ||
+                killing ||
+                resettingKill
+              }
+              onClick={paperControl.onClick}
+              className={`w-full rounded-lg border px-3 py-2 text-sm font-semibold transition disabled:opacity-50 ${paperControl.className}`}
+            >
+              {paperControl.label}
+            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                disabled={submitting || killing || resettingKill}
+                onClick={triggerEmergencyKill}
+                className="rounded-lg border border-rose-500/50 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/20 disabled:opacity-50"
+              >
+                {killing ? "KILLING..." : "Emergency Kill"}
+              </button>
+              <button
+                disabled={submitting || killing || resettingKill}
+                onClick={triggerEmergencyReset}
+                className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-200 transition hover:bg-amber-500/20 disabled:opacity-50"
+              >
+                {resettingKill ? "RESETTING..." : "Reset Kill"}
+              </button>
+            </div>
+          </>
         ) : null}
         {error ? <p className="text-xs text-rose-300">{error}</p> : null}
       </div>

@@ -129,6 +129,14 @@ export interface PortfolioResponse {
 }
 
 export const apiService = {
+  generateIdempotencyKey(prefix = "manual") {
+    const g = globalThis as { crypto?: { randomUUID?: () => string } };
+    if (g.crypto?.randomUUID) {
+      return `${prefix}-${g.crypto.randomUUID()}`;
+    }
+    return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  },
+
   async login(email: string, password: string) {
     const { data } = await apiClient.post<LoginResponse>("/auth/login", {
       email,
@@ -211,26 +219,43 @@ export const apiService = {
     return data;
   },
 
-  async manualBuy(symbol: string, size_usd: number) {
+  async manualBuy(symbol: string, size_usd: number, idempotency_key: string) {
     const { data } = await apiClient.post("/trading/buy", {
       symbol,
       size_usd,
       side: "buy",
+      idempotency_key,
     });
     return data;
   },
 
-  async manualSell(symbol: string, size_usd: number) {
+  async manualSell(symbol: string, size_usd: number, idempotency_key: string) {
     const { data } = await apiClient.post("/trading/sell", {
       symbol,
       size_usd,
       side: "sell",
+      idempotency_key,
     });
     return data;
   },
 
-  async closePosition(symbol: string) {
-    const { data } = await apiClient.post("/trading/close", { symbol });
+  async closePosition(symbol: string, idempotency_key: string) {
+    const { data } = await apiClient.post("/trading/close", {
+      symbol,
+      idempotency_key,
+    });
+    return data;
+  },
+
+  async emergencyKill(reason = "manual_emergency") {
+    const { data } = await apiClient.post("/emergency/kill", null, {
+      params: { reason },
+    });
+    return data;
+  },
+
+  async emergencyKillReset() {
+    const { data } = await apiClient.post("/emergency/kill/reset");
     return data;
   },
 

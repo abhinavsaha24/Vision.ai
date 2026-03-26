@@ -241,6 +241,18 @@ def init_db():
             created_at {timestamp_type}
         )
         """,
+        # Audit log (auth, control-plane, and execution actions)
+        f"""
+        CREATE TABLE IF NOT EXISTS audit_log (
+            id {auto_inc},
+            user_id INTEGER,
+            action TEXT NOT NULL,
+            status TEXT NOT NULL,
+            details_json TEXT,
+            request_id TEXT,
+            created_at {timestamp_type}
+        )
+        """,
         # Indexes
         "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)",
         "CREATE INDEX IF NOT EXISTS idx_trades_user ON trades(user_id)",
@@ -249,6 +261,9 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_equity_created ON equity_history(created_at)",
         "CREATE INDEX IF NOT EXISTS idx_portfolio_created ON portfolio_snapshots(created_at)",
         "CREATE INDEX IF NOT EXISTS idx_metrics_symbol ON metrics(symbol)",
+        "CREATE INDEX IF NOT EXISTS idx_audit_user_id ON audit_log(user_id)",
+        "CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action)",
+        "CREATE INDEX IF NOT EXISTS idx_audit_created_at ON audit_log(created_at)",
     ]
 
     for statement in statements:
