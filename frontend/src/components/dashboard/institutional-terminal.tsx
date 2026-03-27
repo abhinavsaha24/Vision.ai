@@ -23,6 +23,11 @@ import {
 import { EngineStatusPanel } from "@/components/dashboard/engine-status-panel";
 import { TradingPanel } from "@/components/trading/trading-panel";
 import { PortfolioPanel } from "@/components/dashboard/portfolio-panel";
+import { RiskPanel } from "@/components/dashboard/risk-panel";
+import {
+  ActivityStream,
+  type ActivityEvent,
+} from "@/components/dashboard/activity-stream";
 import { TerminalCard } from "@/components/ui/terminal-card";
 
 const ASSETS = [
@@ -34,24 +39,50 @@ const ASSETS = [
   "DOGEUSDT",
 ];
 
-/* ── Animated number display ── */
+/* ── Animated price ticker with tick flash ── */
 function PriceTicker({
   value,
+  prevValue,
   label,
 }: {
   value: number | null;
+  prevValue: number | null;
   label: string;
 }) {
+  const direction =
+    value !== null && prevValue !== null
+      ? value > prevValue
+        ? "up"
+        : value < prevValue
+          ? "down"
+          : "flat"
+      : "flat";
+
+  const flashClass =
+    direction === "up"
+      ? "tick-up"
+      : direction === "down"
+        ? "tick-down"
+        : "";
+
   return (
     <div className="text-center">
       <span className="text-[10px] uppercase tracking-widest text-slate-500">
         {label}
       </span>
-      <p className="mt-0.5 font-mono text-sm font-semibold text-slate-100">
+      <p
+        key={value}
+        className={`mt-0.5 font-mono text-sm font-semibold text-slate-100 ${flashClass}`}
+      >
         {value !== null ? value.toFixed(2) : "--"}
       </p>
     </div>
   );
+}
+
+let activityIdCounter = 0;
+function nextId(): string {
+  return `act-${Date.now()}-${++activityIdCounter}`;
 }
 
 export function InstitutionalTerminal() {
@@ -67,8 +98,8 @@ export function InstitutionalTerminal() {
   const [candles, setCandles] = useState<Kline[]>([]);
   const [trades, setTrades] = useState<TradeEntry[]>([]);
   const [signals, setSignals] = useState<SignalEvent[]>([]);
+  const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([]);
   const [readiness, setReadiness] = useState<number | null>(null);
-  const [logs, setLogs] = useState<string[]>([]);
   const [liveClock, setLiveClock] = useState(() =>
     new Date().toLocaleTimeString([], {
       hour: "2-digit",
@@ -78,17 +109,38 @@ export function InstitutionalTerminal() {
     }),
   );
 
-  const appendLog = useCallback((line: string) => {
-    setLogs((prev) => [...prev, line].slice(-200));
-  }, []);
+  // Track previous market values for tick animations
+  const [prevMarket, setPrevMarket] = useState<MarketSnapshot | null>(null);
+
+  const addActivity = useCallback(
+    (type: ActivityEvent["type"], message: string, details?: string) => {
+      const event: ActivityEvent = {
+        id: nextId(),
+        type,
+        timestamp: new Date().toISOString(),
+        message,
+        details,
+      };
+      setActivityEvents((prev) => [...prev, event].slice(-200));
+    },
+    [],
+  );
+
+  const appendLog = useCallback(
+    (line: string) => {
+      addActivity("system", line);
+    },
+    [addActivity],
+  );
 
   // WebSocket handlers
   const onMarket = useCallback(
     (data: unknown) => {
       const d = data as MarketSnapshot;
+      setPrevMarket(market);
       updateMarket(d);
 
-      // Extract trade from market update if it has trade data
+      // Extract trade from market update
       if (d.last_price && d.timestamp) {
         setTrades((prev) => {
           const entry: TradeEntry = {
@@ -102,7 +154,7 @@ export function InstitutionalTerminal() {
         });
       }
     },
-    [updateMarket],
+    [updateMarket, market],
   );
 
   const onSignal = useCallback(
@@ -120,15 +172,21 @@ export function InstitutionalTerminal() {
         strategy: d.strategy,
       };
       setSignals((prev) => [...prev, event].slice(-50));
+      addActivity(
+        "signal",
+        `${d.direction} signal (${(d.confidence * 100).toFixed(0)}%)`,
+        `α=${d.alpha_score.toFixed(3)} regime=${d.regime}`,
+      );
     },
-    [updateSignal],
+    [updateSignal, addActivity],
   );
 
   const onPortfolio = useCallback(
     (data: unknown) => {
       updatePortfolio(data as never);
+      addActivity("trade", "Portfolio update received");
     },
-    [updatePortfolio],
+    [updatePortfolio, addActivity],
   );
 
   const onMetrics = useCallback(
@@ -158,17 +216,22 @@ export function InstitutionalTerminal() {
     apiService
       .getSystemReadiness()
       .then((data) => {
-        if (active)
+        if (active) {
           setReadiness(Number(data?.overall_score ?? data?.score ?? 0));
+          addActivity("system", `Terminal initialized for ${symbol}`);
+        }
       })
       .catch(() => {
-        if (active) setReadiness(null);
+        if (active) {
+          setReadiness(null);
+          addActivity("system", `Terminal initialized for ${symbol} (readiness unavailable)`);
+        }
       });
 
     return () => {
       active = false;
     };
-  }, [symbol]);
+  }, [symbol, addActivity]);
 
   useEffect(() => {
     const timerId = window.setInterval(() => {
@@ -247,7 +310,7 @@ export function InstitutionalTerminal() {
         }
       >
         {/* Asset Selector */}
-        <div className="flex flex-wrap gap-2 mb-3">
+        <div className="mb-3 flex flex-wrap gap-2">
           {ASSETS.map((asset) => (
             <button
               key={asset}
@@ -265,14 +328,24 @@ export function InstitutionalTerminal() {
 
         {/* Price Ticker Bar */}
         <div className="grid grid-cols-4 gap-4 rounded-lg border border-white/6 bg-slate-900/40 p-3">
-          <PriceTicker value={market?.last_price ?? null} label="Last Price" />
-          <PriceTicker value={market?.spread_bps ?? null} label="Spread BPS" />
+          <PriceTicker
+            value={market?.last_price ?? null}
+            prevValue={prevMarket?.last_price ?? null}
+            label="Last Price"
+          />
+          <PriceTicker
+            value={market?.spread_bps ?? null}
+            prevValue={prevMarket?.spread_bps ?? null}
+            label="Spread BPS"
+          />
           <PriceTicker
             value={market?.order_book_imbalance ?? null}
+            prevValue={prevMarket?.order_book_imbalance ?? null}
             label="OB Imbalance"
           />
           <PriceTicker
             value={market?.volatility_expansion ?? null}
+            prevValue={prevMarket?.volatility_expansion ?? null}
             label="Vol Expansion"
           />
         </div>
@@ -296,24 +369,8 @@ export function InstitutionalTerminal() {
             <TradeFlowPanel trades={trades} />
           </div>
 
-          {/* Operator Log */}
-          <TerminalCard title="Operator Log">
-            <div className="max-h-40 space-y-0 overflow-auto rounded-lg border border-white/6 bg-slate-950/55 p-2">
-              {logs.length === 0 && (
-                <p className="py-3 text-center text-[11px] text-slate-600">
-                  Terminal initialized. Awaiting data streams...
-                </p>
-              )}
-              {[...logs].reverse().map((line, i) => (
-                <p
-                  key={`log-${i}`}
-                  className="border-b border-white/3 py-0.5 font-mono text-[10px] text-slate-400 last:border-b-0"
-                >
-                  {line}
-                </p>
-              ))}
-            </div>
-          </TerminalCard>
+          {/* Activity Stream (replaces simple log) */}
+          <ActivityStream events={activityEvents} />
         </div>
 
         {/* Right Column — 4/12 */}
@@ -334,6 +391,9 @@ export function InstitutionalTerminal() {
                 : null
             }
           />
+          <RiskPanel />
+          <TradingPanel onExecutionLog={appendLog} />
+          <PortfolioPanel />
           <EngineStatusPanel
             channels={wsState.channels}
             reconnectCount={wsState.reconnectCount}
@@ -341,8 +401,6 @@ export function InstitutionalTerminal() {
             messagesReceived={wsState.messagesReceived}
             uptime={wsState.uptime}
           />
-          <TradingPanel onExecutionLog={appendLog} />
-          <PortfolioPanel />
         </div>
       </div>
     </motion.div>

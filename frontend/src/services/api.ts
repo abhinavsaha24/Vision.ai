@@ -1,6 +1,15 @@
 import axios, { AxiosError } from "axios";
 import { getAuthToken } from "@/store/authStore";
 
+const CSRF_COOKIE_NAME = "vision_ai_csrf";
+
+function readCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = document.cookie.match(new RegExp(`(?:^|; )${escaped}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 function resolveApiBaseUrl(): string {
   const internal = process.env.NEXT_INTERNAL_API_URL?.trim();
   const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
@@ -18,13 +27,27 @@ function resolveApiBaseUrl(): string {
 export const apiClient = axios.create({
   baseURL: resolveApiBaseUrl(),
   timeout: 30000,
+  withCredentials: true,
   headers: { "Content-Type": "application/json" },
 });
 
 apiClient.interceptors.request.use((config) => {
   const token = getAuthToken();
-  if (token) {
+  if (token && token.split(".").length === 3) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  const method = String(config.method || "get").toUpperCase();
+  const isMutating =
+    method === "POST" ||
+    method === "PUT" ||
+    method === "PATCH" ||
+    method === "DELETE";
+  if (isMutating && typeof window !== "undefined") {
+    const csrfToken = readCookie(CSRF_COOKIE_NAME);
+    if (csrfToken && !config.headers["X-CSRF-Token"]) {
+      config.headers["X-CSRF-Token"] = csrfToken;
+    }
   }
   return config;
 });
@@ -53,18 +76,14 @@ apiClient.interceptors.response.use(
       }
     }
 
-    const hasToken = Boolean(getAuthToken());
     const requestUrl = String(error.config?.url ?? "");
     const isAuthRoute =
-      requestUrl.includes("/auth/login") || requestUrl.includes("/auth/signup");
+      requestUrl.includes("/auth/login") ||
+      requestUrl.includes("/auth/signup") ||
+      requestUrl.includes("/auth/logout");
 
     // Only expire active sessions for protected API calls.
-    if (
-      status === 401 &&
-      hasToken &&
-      !isAuthRoute &&
-      typeof window !== "undefined"
-    ) {
+    if (status === 401 && !isAuthRoute && typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("vision-ai-auth-expired"));
     }
     return Promise.reject(error);
@@ -129,6 +148,11 @@ export interface PortfolioResponse {
 }
 
 export const apiService = {
+  buildMfaHeaders(mfaCode?: string) {
+    if (!mfaCode) return undefined;
+    return { "X-MFA-Code": mfaCode };
+  },
+
   generateIdempotencyKey(prefix = "manual") {
     const g = globalThis as { crypto?: { randomUUID?: () => string } };
     if (g.crypto?.randomUUID) {
@@ -164,6 +188,11 @@ export const apiService = {
         Authorization: `Bearer ${token}`,
       },
     });
+    return data;
+  },
+
+  async logout() {
+    const { data } = await apiClient.post("/auth/logout");
     return data;
   },
 
@@ -233,48 +262,85 @@ export const apiService = {
     return data;
   },
 
-  async enableLiveTrading() {
-    const { data } = await apiClient.post("/live-trading/enable");
-    return data;
-  },
-
-  async manualBuy(symbol: string, size_usd: number, idempotency_key: string) {
-    const { data } = await apiClient.post("/trading/buy", {
-      symbol,
-      size_usd,
-      side: "buy",
-      idempotency_key,
+  async enableLiveTrading(mfaCode?: string) {
+    const { data } = await apiClient.post("/live-trading/enable", null, {
+      headers: apiService.buildMfaHeaders(mfaCode),
     });
     return data;
   },
 
-  async manualSell(symbol: string, size_usd: number, idempotency_key: string) {
-    const { data } = await apiClient.post("/trading/sell", {
-      symbol,
-      size_usd,
-      side: "sell",
-      idempotency_key,
-    });
+  async manualBuy(
+    symbol: string,
+    size_usd: number,
+    idempotency_key: string,
+    mfaCode?: string,
+  ) {
+    const { data } = await apiClient.post(
+      "/trading/buy",
+      {
+        symbol,
+        size_usd,
+        side: "buy",
+        idempotency_key,
+      },
+      {
+        headers: apiService.buildMfaHeaders(mfaCode),
+      },
+    );
     return data;
   },
 
-  async closePosition(symbol: string, idempotency_key: string) {
-    const { data } = await apiClient.post("/trading/close", {
-      symbol,
-      idempotency_key,
-    });
+  async manualSell(
+    symbol: string,
+    size_usd: number,
+    idempotency_key: string,
+    mfaCode?: string,
+  ) {
+    const { data } = await apiClient.post(
+      "/trading/sell",
+      {
+        symbol,
+        size_usd,
+        side: "sell",
+        idempotency_key,
+      },
+      {
+        headers: apiService.buildMfaHeaders(mfaCode),
+      },
+    );
     return data;
   },
 
-  async emergencyKill(reason = "manual_emergency") {
+  async closePosition(
+    symbol: string,
+    idempotency_key: string,
+    mfaCode?: string,
+  ) {
+    const { data } = await apiClient.post(
+      "/trading/close",
+      {
+        symbol,
+        idempotency_key,
+      },
+      {
+        headers: apiService.buildMfaHeaders(mfaCode),
+      },
+    );
+    return data;
+  },
+
+  async emergencyKill(reason = "manual_emergency", mfaCode?: string) {
     const { data } = await apiClient.post("/emergency/kill", null, {
       params: { reason },
+      headers: apiService.buildMfaHeaders(mfaCode),
     });
     return data;
   },
 
-  async emergencyKillReset() {
-    const { data } = await apiClient.post("/emergency/kill/reset");
+  async emergencyKillReset(mfaCode?: string) {
+    const { data } = await apiClient.post("/emergency/kill/reset", null, {
+      headers: apiService.buildMfaHeaders(mfaCode),
+    });
     return data;
   },
 

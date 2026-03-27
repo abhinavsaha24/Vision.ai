@@ -103,6 +103,15 @@ cp .env.example .env
 # Core runtime
 API_PORT=8080
 LOG_LEVEL=INFO
+ALLOW_PUBLIC_SIGNUP=false
+AUTH_LOCKOUT_THRESHOLD=5
+AUTH_LOCKOUT_WINDOW_SECONDS=300
+AUTH_LOCKOUT_DURATION_SECONDS=900
+MFA_STEP_UP_ENABLED=false
+MFA_TOTP_SECRET=base32_totp_secret_when_enabled
+SESSION_COOKIE_NAME=vision_ai_token
+SESSION_COOKIE_MAX_AGE_SECONDS=604800
+# SESSION_COOKIE_SECURE=true
 
 # Database (single source of truth)
 DB_HOST=localhost
@@ -213,11 +222,17 @@ uvicorn backend.src.api.main:app --host 0.0.0.0 --port 8080
 
 ```ini
 JWT_SECRET=<min_32_chars>
+ENVIRONMENT=production
 DB_HOST=<db-host>
 DB_PORT=5432
 DB_NAME=vision_core
 DB_USER=vision
 DB_PASSWORD=<strong-password>
+SESSION_COOKIE_SECURE=true
+ALLOW_PUBLIC_SIGNUP=false
+AUTH_LOCKOUT_THRESHOLD=5
+AUTH_LOCKOUT_WINDOW_SECONDS=300
+AUTH_LOCKOUT_DURATION_SECONDS=900
 TRADING_MODE=paper
 LIVE_TRADING_ENABLED=false
 CORS_ALLOWED_ORIGINS=https://<your-vercel-domain>,https://*.vercel.app
@@ -251,6 +266,17 @@ After deploy, validate:
 
 The repository now includes a production-oriented, event-driven architecture that separates API, trading engine, risk engine, and execution engine into independently scalable services.
 
+## Institutional Architecture Artifacts
+
+Execution-grade planning and governance documents are available under `docs/`:
+
+- `docs/blackrock_architecture_blueprint.md`
+- `docs/blackrock_phase_execution_tracker.md`
+- `docs/blackrock_controls_evidence_matrix.md`
+- `docs/blackrock_validation_playbook.md`
+- `docs/blackrock_raci_matrix.md`
+- `docs/institutional_transformation_master_plan_2026_03_27.md`
+
 - Canonical API service: `backend.src.api.main:app`
 - Trading worker: `backend.src.platform.workers.trading_engine`
 - Risk worker: `backend.src.platform.workers.risk_engine`
@@ -269,6 +295,12 @@ Detailed runbook and deployment notes:
 - `docs/institutional_microservices_refactor.md`
 - `deployment/Dockerfile.quant`
 - `fly.toml`
+
+Institutional readiness baseline scoring can be generated via:
+
+```bash
+python scripts/institutional_readiness_assessor.py --repo . --output data/institutional_readiness_report.json
+```
 
 ---
 

@@ -35,3 +35,28 @@ test("frontend services resolve from env or browser origin without hardcoded loc
   assert.match(wsService, /window\.location/);
   assert.doesNotMatch(wsService, /127\.0\.0\.1:8080|localhost:8080/);
 });
+
+test("google auth surface is removed from frontend auth flows", () => {
+  const loginPage = fs.readFileSync(
+    path.join(ROOT, "src/app/login/page.tsx"),
+    "utf-8",
+  );
+  const authModal = fs.readFileSync(
+    path.join(ROOT, "src/components/landing/AuthModal.tsx"),
+    "utf-8",
+  );
+  const apiService = fs.readFileSync(
+    path.join(ROOT, "src/services/api.ts"),
+    "utf-8",
+  );
+
+  assert.doesNotMatch(
+    loginPage,
+    /accounts\.google\.com|googleLogin|NEXT_PUBLIC_GOOGLE_CLIENT_ID/,
+  );
+  assert.doesNotMatch(
+    authModal,
+    /accounts\.google\.com|googleLogin|NEXT_PUBLIC_GOOGLE_CLIENT_ID/,
+  );
+  assert.doesNotMatch(apiService, /\/auth\/google|googleLogin/);
+});

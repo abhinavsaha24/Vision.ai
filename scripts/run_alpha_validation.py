@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
 
 from backend.src.research.alpha_validation import AlphaValidationEngine
 from backend.src.platform.market_context import MarketContextFetcher
+from backend.src.features.alpha_features import compute_alpha_features
 
 
 def fetch_data(symbol: str, period: str, interval: str) -> pd.DataFrame:
@@ -25,7 +26,9 @@ def fetch_data(symbol: str, period: str, interval: str) -> pd.DataFrame:
         df.columns = [str(col).lower().replace(" ", "_") for col in df.columns]
     df = df.rename(columns=str.lower)
     base = df[["open", "high", "low", "close", "volume"]].dropna().sort_index()
-    return MarketContextFetcher().enrich_ohlcv(base, symbol=symbol, interval=interval)
+    enriched = MarketContextFetcher().enrich_ohlcv(base, symbol=symbol, interval=interval)
+    enriched = compute_alpha_features(enriched)
+    return enriched
 
 
 def main() -> None:
@@ -33,6 +36,7 @@ def main() -> None:
     parser.add_argument("--symbol", default="BTC-USD")
     parser.add_argument("--period", default="730d")
     parser.add_argument("--interval", default="1h")
+    parser.add_argument("--discover-edges", action="store_true")
     args = parser.parse_args()
 
     df = fetch_data(args.symbol, args.period, args.interval)
@@ -40,7 +44,7 @@ def main() -> None:
 
     metrics, trade_returns, edge_report = engine.run_backtest_with_edge_report(df)
     flow_compare = engine.compare_with_without_flow(df)
-    top_edges = engine.discover_top_edges(df, top_n=5)
+    top_edges = engine.discover_top_edges(df, top_n=5) if args.discover_edges else []
     wf = engine.walk_forward(df, windows=6)
     mc = engine.monte_carlo(trade_returns, n_paths=3000)
 

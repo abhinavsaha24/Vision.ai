@@ -67,7 +67,18 @@ from backend.src.api.auth_routes import router as auth_router
 from backend.src.database.db import (ConnectionPoolManager, get_connection,
                                      init_db, is_postgres_connection,
                                      release_connection)
-from backend.src.auth.auth_service import get_current_user, require_admin
+from backend.src.auth.auth_service import (
+    get_current_user,
+    require_admin,
+    require_admin_step_up,
+)
+from backend.src.security.governance import (
+    approve_request as approve_dual_approval_request,
+    assert_action_allowed,
+    create_approval_request,
+    get_request_status as get_dual_approval_request_status,
+    is_dual_approval_satisfied,
+)
 # Lightweight imports only — these don't trigger heavy computation
 from backend.src.core.config import settings
 from backend.src.core.rate_limiter import RateLimiterMiddleware
@@ -395,8 +406,47 @@ class AddSecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class CSRFMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app):
+        super().__init__(app)
+        self.exempt_prefixes = (
+            "/health",
+            "/docs",
+            "/openapi.json",
+            "/redoc",
+            "/auth/login",
+            "/auth/signup",
+            "/auth/register",
+        )
+
+    async def dispatch(self, request: Request, call_next):
+        method = request.method.upper()
+        if method in {"GET", "HEAD", "OPTIONS"}:
+            return await call_next(request)
+
+        path = request.url.path
+        if any(path.startswith(prefix) for prefix in self.exempt_prefixes):
+            return await call_next(request)
+
+        # Enforce CSRF only for cookie-authenticated browser requests.
+        session_cookie = (request.cookies.get(settings.session_cookie_name) or "").strip()
+        if not session_cookie:
+            return await call_next(request)
+
+        csrf_cookie = (request.cookies.get(settings.csrf_cookie_name) or "").strip()
+        csrf_header = (request.headers.get(settings.csrf_header_name) or "").strip()
+        if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "CSRF token validation failed"},
+            )
+
+        return await call_next(request)
+
+
 app.add_middleware(AddSecurityHeadersMiddleware)
 app.add_middleware(RequestIDMiddleware)
+app.add_middleware(CSRFMiddleware)
 app.add_middleware(RateLimiterMiddleware, max_requests=60, window_seconds=60)
 
 # --------------------------------------------------
@@ -446,7 +496,10 @@ if not cors_allow_headers:
         "Content-Type",
         "X-Request-ID",
         "X-Correlation-ID",
+        "X-CSRF-Token",
     ]
+elif "X-CSRF-Token" not in cors_allow_headers:
+    cors_allow_headers.append("X-CSRF-Token")
 
 app.add_middleware(
     CORSMiddleware,
@@ -996,6 +1049,40 @@ async def health_detailed(request: Request):
         cached_df=svc.cached_df,
         last_data_update=svc.last_update,
     )
+
+
+# ==================================================
+# METRICS (Prometheus-compatible)
+# ==================================================
+
+
+@app.get("/metrics")
+async def prometheus_metrics(request: Request):
+    from backend.src.monitoring.metrics_exporter import metrics
+
+    svc = _svc(request)
+
+    # Update uptime
+    metrics.gauge("uptime_seconds").set(time.time() - (svc.last_update or time.time()))
+
+    # Update portfolio state if available
+    if svc.portfolio_manager:
+        equity = getattr(svc.portfolio_manager, "current_equity", 0.0)
+        dd = getattr(svc.portfolio_manager, "max_drawdown", 0.0)
+        metrics.gauge("portfolio_equity_usd").set(float(equity or 0))
+        metrics.gauge("portfolio_drawdown_pct").set(float(dd or 0))
+
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(
+        content=metrics.export_text(),
+        media_type="text/plain; version=0.0.4; charset=utf-8",
+    )
+
+
+@app.get("/metrics/json")
+async def metrics_json(request: Request):
+    from backend.src.monitoring.metrics_exporter import metrics
+    return metrics.export_json()
 
 
 # ==================================================
@@ -1662,12 +1749,88 @@ async def system_meta_alpha(
     }
 
 
-@app.post("/live-trading/enable", dependencies=[Depends(require_admin)])
+class DualApprovalRequestBody(BaseModel):
+    action: str
+    target: str = "global"
+    expires_minutes: int = 30
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
+class DualApprovalVoteBody(BaseModel):
+    request_id: int
+
+
+class StrategyPromotionBody(BaseModel):
+    strategy_name: str
+    target_version: str
+
+
+@app.post("/governance/approval/request", dependencies=[Depends(require_admin_step_up)])
+async def governance_create_approval_request(
+    request: Request,
+    body: DualApprovalRequestBody,
+    current_user: dict = Depends(require_admin_step_up),
+):
+    assert_action_allowed(current_user, body.action)
+    result = create_approval_request(
+        action=body.action,
+        target=body.target,
+        requested_by=int(current_user.get("user_id", 0) or 0),
+        details=body.details,
+        expires_minutes=body.expires_minutes,
+    )
+    _audit_action(
+        action="governance_approval_request",
+        status="success",
+        details={"request": result},
+        request=request,
+        user_id=current_user.get("user_id"),
+    )
+    return result
+
+
+@app.post("/governance/approval/approve", dependencies=[Depends(require_admin_step_up)])
+async def governance_approve_request(
+    request: Request,
+    body: DualApprovalVoteBody,
+    current_user: dict = Depends(require_admin_step_up),
+):
+    result = approve_dual_approval_request(
+        request_id=body.request_id,
+        approver_user_id=int(current_user.get("user_id", 0) or 0),
+    )
+    _audit_action(
+        action="governance_approval_vote",
+        status="success",
+        details={"request": result},
+        request=request,
+        user_id=current_user.get("user_id"),
+    )
+    return result
+
+
+@app.get("/governance/approval/{request_id}", dependencies=[Depends(require_admin_step_up)])
+async def governance_get_request(
+    request_id: int,
+    current_user: dict = Depends(require_admin_step_up),
+):
+    _ = current_user
+    return get_dual_approval_request_status(request_id)
+
+
+@app.post("/live-trading/enable", dependencies=[Depends(require_admin_step_up)])
 async def enable_live_trading(
     request: Request,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_admin_step_up),
 ):
     """Enable live trading (requires all pre-flight checks to pass)."""
+    assert_action_allowed(current_user, "live_trading_enable")
+    if not is_dual_approval_satisfied("live_trading_enable", "global"):
+        raise HTTPException(
+            403,
+            "Dual approval required for live trading enable. Use governance approval workflow.",
+        )
+
     svc = _svc(request)
     readiness = _build_live_readiness_report(svc)
 
@@ -1698,11 +1861,42 @@ async def enable_live_trading(
     return response
 
 
-@app.post("/emergency/kill", dependencies=[Depends(require_admin)])
+@app.post("/strategy/promotion/execute", dependencies=[Depends(require_admin_step_up)])
+async def execute_strategy_promotion(
+    request: Request,
+    body: StrategyPromotionBody,
+    current_user: dict = Depends(require_admin_step_up),
+):
+    assert_action_allowed(current_user, "strategy_promotion")
+    target = f"{body.strategy_name}:{body.target_version}"
+    if not is_dual_approval_satisfied("strategy_promotion", target):
+        raise HTTPException(
+            403,
+            "Dual approval required for strategy promotion. Use governance approval workflow.",
+        )
+
+    response = {
+        "status": "strategy_promotion_ready",
+        "strategy_name": body.strategy_name,
+        "target_version": body.target_version,
+        "executed_by": current_user.get("user_id"),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    _audit_action(
+        action="strategy_promotion_execute",
+        status="success",
+        details=response,
+        request=request,
+        user_id=current_user.get("user_id"),
+    )
+    return response
+
+
+@app.post("/emergency/kill", dependencies=[Depends(require_admin_step_up)])
 async def emergency_kill(
     request: Request,
     reason: str = "manual_emergency",
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_admin_step_up),
 ):
     """Emergency stop: activate kill switch and cancel all active paper orders."""
     svc = _svc(request)
@@ -1734,12 +1928,19 @@ async def emergency_kill(
     return response
 
 
-@app.post("/emergency/kill/reset", dependencies=[Depends(require_admin)])
+@app.post("/emergency/kill/reset", dependencies=[Depends(require_admin_step_up)])
 async def emergency_kill_reset(
     request: Request,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_admin_step_up),
 ):
     """Reset kill switch after manual verification and incident handling."""
+    assert_action_allowed(current_user, "emergency_kill_reset")
+    if not is_dual_approval_satisfied("emergency_kill_reset", "global"):
+        raise HTTPException(
+            403,
+            "Dual approval required for kill switch reset. Use governance approval workflow.",
+        )
+
     svc = _svc(request)
     if svc.risk_manager and hasattr(svc.risk_manager, "deactivate_kill_switch"):
         svc.risk_manager.deactivate_kill_switch()
@@ -1762,11 +1963,11 @@ async def emergency_kill_reset(
 # MANUAL TRADING
 # ==================================================
 
-@app.post("/trading/buy", dependencies=[Depends(require_admin)])
+@app.post("/trading/buy", dependencies=[Depends(require_admin_step_up)])
 async def manual_buy(
     request: Request,
     body: ManualTradeRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_admin_step_up),
 ):
     """Execute a manual buy order."""
     svc = _svc(request)
@@ -1862,11 +2063,11 @@ async def manual_buy(
             svc.cache.delete(lock_key)
 
 
-@app.post("/trading/sell", dependencies=[Depends(require_admin)])
+@app.post("/trading/sell", dependencies=[Depends(require_admin_step_up)])
 async def manual_sell(
     request: Request,
     body: ManualTradeRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_admin_step_up),
 ):
     """Execute a manual sell (short) order."""
     svc = _svc(request)
@@ -1962,11 +2163,11 @@ async def manual_sell(
             svc.cache.delete(lock_key)
 
 
-@app.post("/trading/close", dependencies=[Depends(require_admin)])
+@app.post("/trading/close", dependencies=[Depends(require_admin_step_up)])
 async def manual_close(
     request: Request,
     body: ClosePositionRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_admin_step_up),
 ):
     """Close an open position."""
     svc = _svc(request)
@@ -2406,7 +2607,7 @@ def _extract_ws_token(websocket: WebSocket) -> Optional[str]:
     if cookie_token:
         return cookie_token
 
-    if bool(getattr(settings, "ws_allow_query_token", True)):
+    if bool(getattr(settings, "ws_allow_query_token", False)):
         query_token = (websocket.query_params.get("token") or "").strip()
         if query_token:
             return query_token
@@ -2528,7 +2729,7 @@ async def get_model_registry(request: Request):
 # ==================================================
 
 
-@app.get("/news")
+@app.get("/news", dependencies=[Depends(get_current_user)])
 async def get_news(request: Request, limit: int = 30):
     """Aggregated news from CryptoPanic, Finnhub, NewsAPI, CoinGecko."""
     svc = _svc(request)

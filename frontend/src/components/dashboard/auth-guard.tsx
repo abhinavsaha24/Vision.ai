@@ -1,12 +1,13 @@
 "use client";
 
 import { bindAuthExpiryListener, useAuthStore } from "@/store/authStore";
+import { apiService } from "@/services/api";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { token, hydrated, hydrate } = useAuthStore();
+  const { token, hydrated, hydrate, setSession, logout } = useAuthStore();
 
   useEffect(() => {
     hydrate();
@@ -19,14 +20,42 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return;
+
+    if (token) {
+      return;
+    }
+
+    let mounted = true;
+    apiService
+      .getMe()
+      .then((me) => {
+        if (!mounted) return;
+        setSession("session", {
+          email: String((me as { email?: string }).email || "user"),
+          role: String((me as { role?: string }).role || "user"),
+        });
+      })
+      .catch(() => {
+        if (!mounted) return;
+        logout();
+        router.replace("/login");
+        if (
+          typeof window !== "undefined" &&
+          window.location.pathname !== "/login"
+        ) {
+          window.location.href = "/login";
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [hydrated, logout, router, setSession, token]);
+
+  useEffect(() => {
+    if (!hydrated) return;
     if (!token) {
-      router.replace("/login");
-      if (
-        typeof window !== "undefined" &&
-        window.location.pathname !== "/login"
-      ) {
-        window.location.href = "/login";
-      }
+      return;
     }
   }, [hydrated, token, router]);
 

@@ -70,6 +70,18 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("JWT_SECRET", "VISION_AI_SECRET", "jwt_secret"),
     )
+    session_cookie_name: str = "vision_ai_token"
+    csrf_cookie_name: str = "vision_ai_csrf"
+    csrf_header_name: str = "X-CSRF-Token"
+    session_cookie_max_age_seconds: int = 60 * 60 * 24 * 7
+    session_cookie_secure: Optional[bool] = None
+    allow_public_signup: bool = False
+    auth_lockout_threshold: int = 5
+    auth_lockout_window_seconds: int = 300
+    auth_lockout_duration_seconds: int = 900
+    mfa_step_up_enabled: bool = False
+    mfa_totp_secret: Optional[str] = None
+    mfa_step_up_window: int = 1
 
     # --------------------------------------------------
     # Data API keys
@@ -112,7 +124,7 @@ class Settings(BaseSettings):
     )
     cors_allow_origin_regex: Optional[str] = r"https://.*\.vercel\.app"
     cors_allow_methods: str = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
-    cors_allow_headers: str = "Authorization,Content-Type,X-Request-ID,X-Correlation-ID"
+    cors_allow_headers: str = "Authorization,Content-Type,X-Request-ID,X-Correlation-ID,X-CSRF-Token"
 
     # --------------------------------------------------
     # Risk
@@ -156,10 +168,33 @@ class Settings(BaseSettings):
         env_name = str(self.environment or "").strip().lower()
         mode = str(self.trading_mode or "").strip().lower()
 
+        if int(self.auth_lockout_threshold) < 1:
+            raise RuntimeError("AUTH_LOCKOUT_THRESHOLD must be >= 1.")
+        if int(self.auth_lockout_window_seconds) < 1:
+            raise RuntimeError("AUTH_LOCKOUT_WINDOW_SECONDS must be >= 1.")
+        if int(self.auth_lockout_duration_seconds) < 1:
+            raise RuntimeError("AUTH_LOCKOUT_DURATION_SECONDS must be >= 1.")
+
+        if self.mfa_step_up_enabled and not (self.mfa_totp_secret or "").strip():
+            raise RuntimeError(
+                "MFA_STEP_UP_ENABLED is true but MFA_TOTP_SECRET is not configured."
+            )
+
         if env_name == "production" and bool(self.ws_allow_query_token):
             raise RuntimeError(
                 "WS_ALLOW_QUERY_TOKEN must be false in production. "
                 "Use Authorization/cookie/subprotocol websocket auth instead."
+            )
+
+        if env_name == "production" and bool(self.allow_public_signup):
+            raise RuntimeError(
+                "ALLOW_PUBLIC_SIGNUP must be false in production. "
+                "Use invite/admin-provisioned accounts."
+            )
+
+        if env_name == "production" and self.session_cookie_secure is False:
+            raise RuntimeError(
+                "SESSION_COOKIE_SECURE cannot be false in production."
             )
 
         if mode == "live" and not bool(self.ws_require_origin_header):

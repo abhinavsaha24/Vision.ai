@@ -2,145 +2,171 @@
 
 ## Overview
 
-Vision AI is an institutional-grade algorithmic trading platform built for crypto markets. The system combines advanced ML models, quantitative signal engines, and robust execution infrastructure into a modular, production-ready platform.
-
----
+Vision AI is an institutional-grade AI quantitative trading platform built for real-time crypto market analysis, signal generation, and automated execution.
 
 ## Architecture Diagram
 
 ```mermaid
-graph TB
-    subgraph Frontend["Frontend (Vercel)"]
-        REACT[React Dashboard]
+graph TD
+    subgraph "Frontend (Vercel)"
+        LP[Landing Page]
+        LG[Login/Auth]
+        DB[Dashboard Terminal]
+        API_PROXY["Next.js API Proxy (/api/[...path])"]
     end
 
-    subgraph API["API Layer"]
+    subgraph "Backend (Render/K8s)"
         FASTAPI[FastAPI Server]
-        AUTH[Auth Service]
+        
+        subgraph "Core Services"
+            DF[DataFetcher]
+            FE[FeatureEngineer]
+            MT[ModelTrainer]
+            PR[Predictor]
+            MR[ModelRegistry]
+        end
+
+        subgraph "Alpha Engine"
+            QSE[QuantSignalEngine]
+            MAE[MetaAlphaEngine]
+            RD[RegimeDetector]
+            DD[DriftDetector]
+            SS[StrategySelector]
+            SE[StrategyEngine]
+        end
+
+        subgraph "Execution"
+            EE[ExecutionEngine]
+            OM[OrderManager]
+            CB[CircuitBreaker]
+            SM[SlippageModel]
+            TL[TradingLoop]
+        end
+
+        subgraph "Risk & Safety"
+            RM[RiskManager]
+            CE[ConfidenceEngine]
+            RS[RiskScore]
+            EC[ExposureController]
+            CP[CrashProtection]
+            LG2[LiveGuard]
+            LS[LiveTradingSafety]
+        end
+
+        subgraph "Portfolio"
+            PM[PortfolioManager]
+        end
+
+        subgraph "Security"
+            AUTH[AuthService]
+            GOV[Governance / Dual Approval]
+            CSRF[CSRF Middleware]
+            RL[Rate Limiter]
+            SH[Security Headers]
+        end
+
+        subgraph "Observability"
+            HM[HealthMonitor]
+            MS[MonitoringService]
+            ME[MetricsExporter]
+            EMC[ExecutionMetricsCollector]
+            SL[StructuredLogger]
+        end
     end
 
-    subgraph Core["Core Trading Engine"]
-        STRAT[Strategy Engine — 9 strategies + stat arb]
-        EXEC[Execution Engine — market / limit / TWAP / VWAP]
-        RISK[Risk Manager — VaR, drawdown, kill switch]
-        PORT[Portfolio Manager — Kelly, MV, RP, HRP]
+    subgraph "Exchange"
+        PA[PaperAdapter]
+        BA[BinanceAdapter]
     end
 
-    subgraph ML["ML Pipeline"]
-        FEAT[Feature Engine — 60+ indicators]
-        MODELS[Model Ensemble — RF + XGB + LGB + LSTM + Transformer]
-        REGIME[Regime Detector — HMM + GMM]
+    subgraph "Data Sources"
+        BN[Binance REST/WS]
+        NEWS[News APIs]
+        RC[Redis Cache]
+        PG[PostgreSQL]
     end
 
-    subgraph Exchange["Exchange Layer"]
-        ADAPTER{Exchange Adapter}
-        PAPER[Paper Adapter]
-        BINANCE[Binance Adapter via ccxt]
-        ORDERS[Order Manager]
-    end
+    DB --> API_PROXY
+    DB -->|WebSocket| FASTAPI
+    API_PROXY -->|HTTP| FASTAPI
 
-    subgraph Infra["Infrastructure"]
-        LOGGER[Structured Logger — JSON + correlation IDs]
-        HEALTH[Health Monitor — component checks]
-        REDIS[(Redis Cache)]
-        PG[(PostgreSQL)]
-    end
-
-    REACT --> FASTAPI
+    FASTAPI --> DF
+    FASTAPI --> QSE
+    FASTAPI --> EE
+    FASTAPI --> PM
+    FASTAPI --> RM
     FASTAPI --> AUTH
-    FASTAPI --> Core
-    FASTAPI --> ML
 
-    STRAT --> EXEC
-    EXEC --> RISK
-    RISK --> PORT
-    EXEC --> ORDERS
-    ORDERS --> ADAPTER
-    ADAPTER --> PAPER
-    ADAPTER --> BINANCE
+    DF --> BN
+    EE --> PA
+    EE --> BA
+    PA --> PM
+    BA --> BN
 
-    FEAT --> MODELS
-    MODELS --> REGIME
-
-    Core --> LOGGER
-    Core --> HEALTH
-    FASTAPI --> REDIS
-    ORDERS --> PG
+    FASTAPI --> RC
+    AUTH --> PG
+    GOV --> PG
+    HM --> ME
 ```
 
----
+## Component Interaction
 
-## Module Map
+### Data Flow
+1. **Market Data**: Binance → DataFetcher → FeatureEngineer → ML Models → Signals
+2. **Execution**: Signal → Risk Check → Order Manager → Exchange Adapter → Fill → Portfolio
+3. **WebSocket**: Backend → 4 Channels (market, signals, portfolio, metrics) → Frontend Terminal
 
-| Module | Path | Responsibility |
-|---|---|---|
-| Core | `backend/src/core/` | Config, structured logging, health monitoring |
-| Data | `backend/src/data/` | Market data ingestion, caching, normalization |
-| Features | `backend/src/features/` | 60+ technical indicators and feature selection |
-| Models | `backend/src/models/` | ML training, ensemble, regime detection, model registry |
-| Research | `backend/src/research/` | Backtesting, alpha research, walk-forward validation |
-| Strategy | `backend/src/strategy/` | 10 signal strategies including stat arb |
-| Execution | `backend/src/execution/` | Order execution, order management, live safety |
-| Risk | `backend/src/risk/` | Risk scoring, limits, VaR, kill switch |
-| Portfolio | `backend/src/portfolio/` | Position tracking, optimization (Kelly, MV, RP, HRP) |
-| Exchange | `backend/src/exchange/` | Abstract adapter — paper and Binance implementations |
-| Sentiment | `backend/src/sentiment/` | FinBERT NLP, multi-source news aggregation |
-| API | `backend/src/api/` | FastAPI REST endpoints (28+ routes) |
-| Workers | `backend/src/workers/` | Background trading loop |
-| Database | `backend/src/database/` | PostgreSQL persistence layer |
-| Auth | `backend/src/auth/` | JWT authentication service |
+### Request Flow
+1. Browser → Next.js API Proxy → FastAPI Backend
+2. Auth cookies injected at proxy layer via `vision_ai_token` cookie
+3. CSRF tokens validated on mutating requests
+4. Rate limiting enforced at middleware level
 
----
+## Security Posture
+
+| Control | Implementation |
+|---------|---------------|
+| Authentication | JWT via HttpOnly cookies |
+| CSRF | Double-submit token (cookie + header) |
+| Rate Limiting | Per-IP sliding window (60 req/60s) |
+| Security Headers | HSTS, CSP, X-Frame-Options, X-XSS-Protection |
+| Account Lockout | 5 failures → 15min lockout |
+| MFA | Optional TOTP step-up for critical actions |
+| Dual Approval | Required for live trading enablement |
+| Input Validation | Pydantic models with field constraints |
+| Audit Logging | All security-critical actions logged to DB |
+| Kill Switch | Emergency halt for all trading |
+| Circuit Breaker | Auto-trip on consecutive execution failures |
 
 ## Deployment
 
-| Component | Platform | Config |
-|---|---|---|
-| Frontend | Vercel | `frontend/ai-trading-dashboard/` |
-| Backend API | Render / Docker | `deployment/Dockerfile` |
-| Database | PostgreSQL 15 | `deployment/docker-compose.yml` |
-| Cache | Redis 7 | `deployment/docker-compose.yml` |
+### Vercel (Frontend)
+- Next.js 16 with App Router
+- API proxy catch-all route handles backend communication
+- WebSocket connections direct to backend
 
-### Quick Start
+### Render (Backend)
+- FastAPI with uvicorn
+- Lifespan-based service initialization (deferred startup)
+- Health endpoint for liveness probes
 
-```bash
-# Development
-python -m backend.src.api.main
+### Kubernetes (Production)
+- Namespace-isolated deployment
+- HPA (2-8 replicas) based on CPU/memory
+- PDB (minAvailable: 1) for zero-downtime deployments
+- Network policies restricting inter-pod communication
+- Separate worker deployment for trading loops
+- Ingress with TLS termination
 
-# Docker
-cd deployment && docker-compose up --build
+## Technology Stack
 
-# Tests
-python -m pytest tests/ -v
-```
-
----
-
-## API Endpoints (28+)
-
-| Endpoint | Method | Description |
-|---|---|---|
-| `/health` | GET | System health |
-| `/health/detailed` | GET | Component-level health |
-| `/data/fetch` | POST | Fetch market data |
-| `/features/generate` | POST | Generate features |
-| `/model/train` | POST | Train ML models |
-| `/model/predict` | POST | AI prediction + quant signals |
-| `/model/registry` | GET | Model version history |
-| `/backtest/run` | POST | Run backtest |
-| `/portfolio/status` | GET | Portfolio state |
-| `/portfolio/performance` | GET | Performance metrics |
-| `/regime/current` | GET | Market regime |
-| `/sentiment/current` | GET | News sentiment |
-| `/risk/status` | GET | Risk dashboard |
-| `/strategies/list` | GET | Available strategies |
-| `/paper-trading/start` | POST | Start paper trading |
-| `/paper-trading/stop` | POST | Stop paper trading |
-| `/paper-trading/status` | GET | Paper trading metrics |
-| `/live-trading/preflight` | GET | Safety pre-flight checks |
-| `/live-trading/enable` | POST | Enable live trading |
-| `/orders/active` | GET | Active orders |
-| `/orders/history` | GET | Order history |
-| `/news` | GET | Aggregated news |
-| `/market-intelligence` | GET | Trending tokens |
-| `/research/feature-importance` | GET | Feature importance |
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS 4, Zustand, Framer Motion |
+| Backend | Python, FastAPI, Pydantic v2, uvicorn |
+| ML | LightGBM, scikit-learn, NumPy, pandas |
+| Charting | lightweight-charts v4 |
+| State | Zustand (client), Redis (server) |
+| Database | PostgreSQL (production), SQLite (development) |
+| Exchange | Binance REST + WebSocket API |
+| Deployment | Vercel, Render, Docker, Kubernetes |

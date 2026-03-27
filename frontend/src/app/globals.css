@@ -162,3 +162,67 @@ code, pre, .font-mono {
   background: rgba(34, 211, 238, 0.3);
   color: #e2e8f0;
 }
+
+/* ── Enhanced tick flash animations ── */
+@keyframes tick-flash-green {
+  0% { color: #10b981; text-shadow: 0 0 8px rgba(16, 185, 129, 0.6); }
+  100% { color: inherit; text-shadow: none; }
+}
+@keyframes tick-flash-red {
+  0% { color: #f43f5e; text-shadow: 0 0 8px rgba(244, 63, 94, 0.6); }
+  100% { color: inherit; text-shadow: none; }
+}
+
+.tick-up {
+  animation: tick-flash-green 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.tick-down {
+  animation: tick-flash-red 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* ── Signal pulse ── */
+@keyframes signal-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.05); }
+}
+
+.signal-pulse {
+  animation: signal-pulse 2s ease-in-out infinite;
+}
+
+/* ── Heatmap gradient utilities ── */
+.heatmap-bid {
+  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.15));
+}
+.heatmap-ask {
+  background: linear-gradient(90deg, transparent, rgba(244, 63, 94, 0.15));
+}
+
+/* ── Subtle glow border ── */
+.glow-border-cyan {
+  border-color: rgba(34, 211, 238, 0.3);
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.08),
+              inset 0 0 20px rgba(34, 211, 238, 0.03);
+}
+
+/* ── Live data indicator ── */
+@keyframes live-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.live-dot {
+  animation: live-dot 1.5s ease-in-out infinite;
+}
+
+/* ── Smooth scroll for activity streams ── */
+.smooth-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Chart container ── */
+.chart-container {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(2, 6, 23, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+

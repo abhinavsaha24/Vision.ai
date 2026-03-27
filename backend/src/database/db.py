@@ -161,6 +161,8 @@ def init_db():
             id {auto_inc},
             email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
+            auth_provider TEXT NOT NULL DEFAULT 'local',
+            provider_user_id TEXT,
             role TEXT NOT NULL DEFAULT 'user',
             is_active INTEGER NOT NULL DEFAULT 1,
             created_at {timestamp_type}
@@ -253,8 +255,32 @@ def init_db():
             created_at {timestamp_type}
         )
         """,
+        # Revoked tokens (JWT jti blacklist)
+        f"""
+        CREATE TABLE IF NOT EXISTS token_revocations (
+            token_jti TEXT PRIMARY KEY,
+            expires_at {timestamp_type},
+            revoked_at {timestamp_type}
+        )
+        """,
+        # Dual approval requests for high-risk control actions
+        f"""
+        CREATE TABLE IF NOT EXISTS dual_approval_requests (
+            id {auto_inc},
+            action TEXT NOT NULL,
+            target TEXT NOT NULL,
+            requested_by INTEGER NOT NULL,
+            approvals_json TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            expires_at {timestamp_type},
+            details_json TEXT,
+            created_at {timestamp_type},
+            updated_at {timestamp_type}
+        )
+        """,
         # Indexes
         "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_provider_user_id ON users(provider_user_id)",
         "CREATE INDEX IF NOT EXISTS idx_trades_user ON trades(user_id)",
         "CREATE INDEX IF NOT EXISTS idx_signals_symbol ON signals(symbol)",
         "CREATE INDEX IF NOT EXISTS idx_signals_created ON signals(created_at)",
@@ -264,6 +290,9 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_audit_user_id ON audit_log(user_id)",
         "CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action)",
         "CREATE INDEX IF NOT EXISTS idx_audit_created_at ON audit_log(created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_token_revocations_expires_at ON token_revocations(expires_at)",
+        "CREATE INDEX IF NOT EXISTS idx_dual_approval_action_target ON dual_approval_requests(action, target)",
+        "CREATE INDEX IF NOT EXISTS idx_dual_approval_status ON dual_approval_requests(status)",
     ]
 
     for statement in statements:
@@ -273,5 +302,17 @@ def init_db():
         except Exception as e:
             conn.rollback()
             logger.warning("Statement execution warning: %s", e)
+
+    # Best-effort migrations for existing deployments.
+    migrations = [
+        "ALTER TABLE users ADD COLUMN auth_provider TEXT NOT NULL DEFAULT 'local'",
+        "ALTER TABLE users ADD COLUMN provider_user_id TEXT",
+    ]
+    for statement in migrations:
+        try:
+            cursor.execute(statement)
+            conn.commit()
+        except Exception:
+            conn.rollback()
 
     conn.close()

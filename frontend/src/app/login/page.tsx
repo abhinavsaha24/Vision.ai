@@ -24,10 +24,31 @@ export default function LoginPage() {
   }, [hydrate]);
 
   useEffect(() => {
-    if (hydrated && token) {
+    if (!hydrated) return;
+    if (token) {
       router.replace("/dashboard");
+      return;
     }
-  }, [hydrated, token, router]);
+
+    let mounted = true;
+    apiService
+      .getMe()
+      .then((me) => {
+        if (!mounted) return;
+        setSession("session", {
+          email: String((me as { email?: string }).email || "user"),
+          role: String((me as { role?: string }).role || "user"),
+        });
+        router.replace("/dashboard");
+      })
+      .catch(() => {
+        // No active session cookie on initial load.
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [hydrated, token, router, setSession]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -57,16 +78,26 @@ export default function LoginPage() {
       if (mode === "signup") {
         await apiService.signup(email, password);
         setSuccess("Account created successfully. Signing in...");
-        const data = await apiService.login(email, password);
-        const tokenValue = data.access_token || data.token;
-        if (!tokenValue) throw new Error("Token missing");
-        setSession(tokenValue, { email, role: "user" });
+        await apiService.login(email, password);
+        const me = (await apiService.getMe()) as {
+          email?: string;
+          role?: string;
+        };
+        setSession("session", {
+          email: me?.email || email,
+          role: me?.role || "user",
+        });
         router.push("/dashboard");
       } else {
-        const data = await apiService.login(email, password);
-        const tokenValue = data.access_token || data.token;
-        if (!tokenValue) throw new Error("Token missing in login response");
-        setSession(tokenValue, { email, role: "user" });
+        await apiService.login(email, password);
+        const me = (await apiService.getMe()) as {
+          email?: string;
+          role?: string;
+        };
+        setSession("session", {
+          email: me?.email || email,
+          role: me?.role || "user",
+        });
         router.push("/dashboard");
       }
     } catch (err) {

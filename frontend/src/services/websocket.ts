@@ -89,9 +89,15 @@ function endpointFor(channel: ChannelName): string {
   return "/ws/metrics";
 }
 
+function isLikelyJwtToken(token: string | null): token is string {
+  if (!token) return false;
+  const parts = token.split(".");
+  return parts.length === 3 && parts.every((part) => part.length > 0);
+}
+
 function buildProtocols(token: string | null): string[] {
   const protocols = ["vision-ai.v1"];
-  if (token) {
+  if (isLikelyJwtToken(token)) {
     protocols.push(`bearer.${token}`);
   }
   return protocols;
@@ -118,7 +124,7 @@ class RealtimeChannel<T> {
     if (
       (process.env.NEXT_PUBLIC_WS_QUERY_TOKEN_FALLBACK || "").toLowerCase() ===
         "true" &&
-      token
+      isLikelyJwtToken(token)
     ) {
       params.set("token", token);
     }

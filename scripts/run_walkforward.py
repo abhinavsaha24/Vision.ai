@@ -36,7 +36,7 @@ def main():
         print("Failed to fetch sufficient data.")
         return
         
-    print(f"   ✓ Fetched {len(df)} 5-minute bars")
+    print(f"   [OK] Fetched {len(df)} 5-minute bars")
 
     # 2. Engineer Features
     print("\n2. Computing Alpha Features (Microstructure, Volatility, Stats)...")
@@ -60,11 +60,11 @@ def main():
     
     # Clean up NaNs
     df = df.dropna()
-    print(f"   ✓ Generated {len(df.columns)} features. Active bars: {len(df)}")
+    print(f"   [OK] Generated {len(df.columns)} features. Active bars: {len(df)}")
     
     # 3. Get feature columns
     alpha_cols = get_alpha_feature_names(df)
-    print(f"   ✓ Identified {len(alpha_cols)} pure alpha features")
+    print(f"   [OK] Identified {len(alpha_cols)} pure alpha features")
 
     # 4. Run Anchored Walk-Forward Validation
     print("\n3. Running strict out-of-sample walk-forward validation...")
@@ -76,8 +76,8 @@ def main():
     
     config = AlphaModelConfig(
         calibrate=True,
-        long_threshold=0.60,
-        short_threshold=0.40,
+        long_threshold=0.56,
+        short_threshold=0.44,
     )
     
     # Disable LGBM/XGB verbose logs for clean output
@@ -115,13 +115,13 @@ def main():
     print("\n" + "=" * 60)
     print("AGGREGATE METRICS (Out-of-Sample)")
     print("=" * 60)
-    print(f"🏆 Average Accuracy:  {agg['avg_accuracy'] * 100:.2f}%")
-    print(f"📈 Total OOS Sharpe:  {agg['total_oos_sharpe']:.2f}")
-    print(f"💰 Average Return:    {agg['avg_return'] * 100:.2f}%")
-    print(f"🎯 Average Win Rate:  {agg['avg_win_rate'] * 100:.2f}%")
-    print(f"⚖️ Profit Factor:     {agg['avg_profit_factor']:.2f}")
-    print(f"🛡️ Avg Max Drawdown: {agg['avg_max_drawdown'] * 100:.2f}%")
-    print(f"🔄 Total Trades:      {agg['total_trades']}")
+    print(f"[SUMMARY] Average Accuracy:  {agg['avg_accuracy'] * 100:.2f}%")
+    print(f"[SUMMARY] Total OOS Sharpe:  {agg['total_oos_sharpe']:.2f}")
+    print(f"[SUMMARY] Average Return:    {agg['avg_return'] * 100:.2f}%")
+    print(f"[SUMMARY] Average Win Rate:  {agg['avg_win_rate'] * 100:.2f}%")
+    print(f"[SUMMARY] Profit Factor:     {agg['avg_profit_factor']:.2f}")
+    print(f"[SUMMARY] Avg Max Drawdown: {agg['avg_max_drawdown'] * 100:.2f}%")
+    print(f"[SUMMARY] Total Trades:      {agg['total_trades']}")
     print("=" * 60)
     
     print("\nDone.")

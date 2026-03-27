@@ -18,6 +18,8 @@ class PlatformSettings(BaseSettings):
 
     redis_url: str = Field(default="redis://localhost:6379/0")
     queue_block_ms: int = Field(default=5000)
+    event_bus_backend: str = Field(default="kafka")
+    kafka_bootstrap_servers: str = Field(default="localhost:9092")
 
     database_url: SecretStr | None = Field(default=None, validation_alias="DATABASE_URL")
     db_host: str = Field(default="localhost", validation_alias="DB_HOST")
@@ -65,6 +67,11 @@ class PlatformSettings(BaseSettings):
             issues.append("API_PORT must be a positive integer")
         if not self.redis_url.strip():
             issues.append("REDIS_URL must be set")
+        bus_backend = str(self.event_bus_backend).strip().lower()
+        if bus_backend not in {"kafka", "redis"}:
+            issues.append("EVENT_BUS_BACKEND must be one of: kafka, redis")
+        if bus_backend == "kafka" and not self.kafka_bootstrap_servers.strip():
+            issues.append("KAFKA_BOOTSTRAP_SERVERS must be set when EVENT_BUS_BACKEND=kafka")
         if not self.database_url_value.strip():
             issues.append("DATABASE_URL or DB_* variables must resolve to a database connection string")
         if self.force_test_trade and self.force_test_trade_notional <= 0:

@@ -17,7 +17,7 @@ import psutil
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from backend.src.auth.auth_service import require_admin
+from backend.src.auth.auth_service import require_admin_step_up
 from backend.src.database.db import get_connection, release_connection
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ class DisableUserRequest(BaseModel):
 
 
 @router.get("/users")
-async def list_users(admin: dict = Depends(require_admin)):
+async def list_users(admin: dict = Depends(require_admin_step_up)):
     """List all registered users (admin only)."""
     try:
         conn = get_connection()
@@ -77,7 +77,7 @@ async def list_users(admin: dict = Depends(require_admin)):
 
 
 @router.get("/system-health")
-async def system_health(admin: dict = Depends(require_admin)):
+async def system_health(admin: dict = Depends(require_admin_step_up)):
     """Detailed system health (admin only)."""
     try:
         cpu_percent = psutil.cpu_percent(interval=0.1)
@@ -108,7 +108,7 @@ async def system_health(admin: dict = Depends(require_admin)):
 @router.post("/disable-user")
 async def disable_user(
     req: DisableUserRequest,
-    admin: dict = Depends(require_admin),
+    admin: dict = Depends(require_admin_step_up),
 ):
     """Disable a user account (admin only)."""
     try:

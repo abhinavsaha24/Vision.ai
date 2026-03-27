@@ -91,6 +91,18 @@ def ensure_schema(db: Database) -> None:
     )
     db.execute(
         """
+        CREATE TABLE IF NOT EXISTS execution_idempotency (
+            idempotency_key TEXT PRIMARY KEY,
+            source_event_id TEXT NOT NULL,
+            status TEXT NOT NULL,
+            order_id TEXT,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+        )
+        """
+    )
+    db.execute(
+        """
         CREATE TABLE IF NOT EXISTS portfolio_snapshots (
             id BIGSERIAL PRIMARY KEY,
             cash DOUBLE PRECISION NOT NULL,
@@ -317,6 +329,46 @@ def insert_trade(
         ),
     )
     return row is not None
+
+
+def claim_execution_idempotency(
+    db: Database,
+    idempotency_key: str,
+    source_event_id: str,
+) -> tuple[bool, str]:
+    row = db.fetchone(
+        """
+        INSERT INTO execution_idempotency (idempotency_key, source_event_id, status)
+        VALUES (%s, %s, %s)
+        ON CONFLICT (idempotency_key) DO NOTHING
+        RETURNING idempotency_key
+        """,
+        (idempotency_key, source_event_id, "processing"),
+    )
+    if row is not None:
+        return True, "processing"
+
+    existing = db.fetchone(
+        "SELECT status FROM execution_idempotency WHERE idempotency_key=%s",
+        (idempotency_key,),
+    )
+    return False, str(existing[0]) if existing else "unknown"
+
+
+def mark_execution_idempotency(
+    db: Database,
+    idempotency_key: str,
+    status: str,
+    order_id: str | None = None,
+) -> None:
+    db.execute(
+        """
+        UPDATE execution_idempotency
+        SET status=%s, order_id=COALESCE(%s, order_id), updated_at=NOW()
+        WHERE idempotency_key=%s
+        """,
+        (status, order_id, idempotency_key),
+    )
 
 
 def get_pipeline_counts(db: Database) -> dict[str, float]:

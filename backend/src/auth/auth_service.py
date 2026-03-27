@@ -10,14 +10,17 @@ Features:
 
 import logging
 from datetime import datetime, timedelta, timezone
+import uuid
 
 import bcrypt
 import jwt
-from fastapi import Depends, HTTPException, status
+import pyotp
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import InvalidTokenError
 
 from backend.src.core.config import settings
+from backend.src.database.db import get_connection, release_connection
 
 # --------------------------------------------------
 # Security Settings
@@ -71,9 +74,56 @@ def verify_password(password: str, hashed_password: str) -> bool:
 def create_access_token(data: dict, expires_minutes: int = ACCESS_TOKEN_EXPIRE_MINUTES):
     payload = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
-    payload.update({"exp": expire})
+    payload.update({"exp": expire, "iat": datetime.now(timezone.utc), "jti": str(uuid.uuid4())})
     token = jwt.encode(payload, _get_secret_key(), algorithm=ALGORITHM)
     return token
+
+
+def is_token_revoked(token_jti: str) -> bool:
+    if not token_jti:
+        return False
+    conn = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT 1 FROM token_revocations WHERE token_jti=%s LIMIT 1",
+            (token_jti,),
+        )
+        return cur.fetchone() is not None
+    except Exception:
+        return False
+    finally:
+        if conn is not None:
+            release_connection(conn)
+
+
+def revoke_token_jti(token_jti: str, exp_claim: int | None = None) -> None:
+    if not token_jti:
+        return
+    expires_at = datetime.now(timezone.utc)
+    if isinstance(exp_claim, int):
+        expires_at = datetime.fromtimestamp(exp_claim, tz=timezone.utc)
+
+    conn = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO token_revocations (token_jti, expires_at, revoked_at)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (token_jti) DO NOTHING
+            """,
+            (token_jti, expires_at, datetime.now(timezone.utc)),
+        )
+        conn.commit()
+    except Exception:
+        if conn is not None:
+            conn.rollback()
+    finally:
+        if conn is not None:
+            release_connection(conn)
 
 
 # --------------------------------------------------
@@ -95,24 +145,41 @@ def decode_token(token: str):
 
 
 async def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ):
     """
     Extract and validate JWT from Authorization header.
     Returns the decoded payload dict with user_id, role, etc.
     """
-    if credentials is None:
+    header_token = credentials.credentials if credentials is not None else None
+    cookie_token = (request.cookies.get(settings.session_cookie_name) or "").strip() or None
+
+    token = header_token or cookie_token
+
+    if token is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing authentication token",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    payload = decode_token(credentials.credentials)
+    payload = decode_token(token)
+    if payload is None and header_token and cookie_token:
+        # Graceful fallback when a stale/invalid bearer header coexists with a valid session cookie.
+        payload = decode_token(cookie_token)
+
     if payload is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if is_token_revoked(str(payload.get("jti") or "")):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -130,4 +197,41 @@ async def require_admin(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required",
         )
+    return current_user
+
+
+def _verify_step_up_code(code: str) -> bool:
+    secret = (settings.mfa_totp_secret or "").strip()
+    if not secret:
+        return False
+    try:
+        totp = pyotp.TOTP(secret)
+        return bool(totp.verify(code, valid_window=max(0, int(settings.mfa_step_up_window))))
+    except Exception:
+        return False
+
+
+async def require_admin_step_up(
+    request: Request,
+    current_user: dict = Depends(require_admin),
+):
+    """
+    Enforce MFA step-up for sensitive admin operations when enabled.
+    """
+    if not bool(settings.mfa_step_up_enabled):
+        return current_user
+
+    code = (request.headers.get("X-MFA-Code") or "").strip()
+    if not code:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="MFA step-up required",
+        )
+
+    if not _verify_step_up_code(code):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid MFA code",
+        )
+
     return current_user

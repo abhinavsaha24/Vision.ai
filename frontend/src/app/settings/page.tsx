@@ -36,7 +36,12 @@ export default function SettingsPage() {
           title="Control Center"
           right={
             <button
-              onClick={() => {
+              onClick={async () => {
+                try {
+                  await apiService.logout();
+                } catch {
+                  // Continue with local logout even if backend logout fails.
+                }
                 logout();
                 window.location.href = "/login";
               }}

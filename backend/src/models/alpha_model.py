@@ -435,9 +435,16 @@ def walk_forward_alpha(
         test_df = df.iloc[test_start:test_end].copy()
 
         # Prepare data
-        X_train = train_df[feature_cols].values
+        usable_cols = list(feature_cols)
+        if usable_cols:
+            train_var = train_df[usable_cols].var(numeric_only=True)
+            filtered = [c for c in usable_cols if float(train_var.get(c, 0.0) or 0.0) > 1e-10]
+            if len(filtered) >= max(8, int(len(usable_cols) * 0.35)):
+                usable_cols = filtered
+
+        X_train = train_df[usable_cols].values
         y_train = train_df[target_col].values.astype(int)
-        X_test = test_df[feature_cols].values
+        X_test = test_df[usable_cols].values
         y_test = test_df[target_col].values.astype(int)
 
         # Sample weights: emphasize actionable labels
@@ -452,7 +459,7 @@ def walk_forward_alpha(
         try:
             train_metrics = model.fit(
                 X_train, y_train,
-                feature_names=feature_cols,
+                feature_names=usable_cols,
                 sample_weight=weights,
             )
         except Exception as e:
@@ -461,7 +468,140 @@ def walk_forward_alpha(
 
         # Predict on test set
         proba = model.predict_proba(X_test)
-        signals = model.generate_signals(X_test)
+        train_proba = model.predict_proba(X_train)
+        proba_smooth = (
+            pd.Series(proba, index=test_df.index)
+            .rolling(3, min_periods=1)
+            .mean()
+            .values
+        )
+
+        # Dynamic thresholding uses train-fold probability dispersion.
+        long_dynamic = float(np.clip(np.quantile(train_proba, 0.58), 0.52, 0.66))
+        short_dynamic = float(np.clip(np.quantile(train_proba, 0.42), 0.34, 0.48))
+
+        model_score = np.clip((proba_smooth - 0.5) * 2.0, -1.0, 1.0)
+
+        # Momentum + mean-reversion hybrid logic.
+        mom_sharpe = (
+            test_df["st_momentum_sharpe_10"].values.astype(float)
+            if "st_momentum_sharpe_10" in test_df.columns
+            else np.zeros(len(test_df))
+        )
+        rel_strength = (
+            test_df["st_rel_strength_20"].values.astype(float)
+            if "st_rel_strength_20" in test_df.columns
+            else np.zeros(len(test_df))
+        )
+        efficiency = (
+            test_df["rg_efficiency_20"].values.astype(float)
+            if "rg_efficiency_20" in test_df.columns
+            else np.zeros(len(test_df))
+        )
+        mom_component = np.tanh(mom_sharpe / 1.8)
+        mr_component = -np.tanh(rel_strength * 5.0)
+        blend = np.clip((efficiency - 0.35) / 0.35, 0.0, 1.0)
+        hybrid_component = (blend * mom_component) + ((1.0 - blend) * mr_component)
+
+        flow_delta = (
+            test_df["of_volume_delta_zscore"].values.astype(float)
+            if "of_volume_delta_zscore" in test_df.columns
+            else np.zeros(len(test_df))
+        )
+        flow_imb = (
+            test_df["of_ob_imbalance"].values.astype(float)
+            if "of_ob_imbalance" in test_df.columns
+            else np.zeros(len(test_df))
+        )
+        flow_component = np.clip((np.tanh(flow_delta / 2.0) * 0.6) + (np.tanh(flow_imb * 2.0) * 0.4), -1.0, 1.0)
+
+        mtf_component = (
+            np.clip(test_df["rg_tf_agreement"].values.astype(float), -1.0, 1.0)
+            if "rg_tf_agreement" in test_df.columns
+            else np.zeros(len(test_df))
+        )
+
+        combined_score = np.clip(
+            (0.55 * model_score)
+            + (0.25 * hybrid_component)
+            + (0.12 * flow_component)
+            + (0.08 * mtf_component),
+            -1.0,
+            1.0,
+        )
+
+        vol_regime = (
+            test_df["rg_vol_regime_change"].values.astype(float)
+            if "rg_vol_regime_change" in test_df.columns
+            else np.zeros(len(test_df))
+        )
+        vol_adjust = np.clip(vol_regime, 0.0, 1.5)
+        score_threshold = np.clip(0.06 + (0.025 * vol_adjust), 0.05, 0.14)
+
+        signals = np.zeros(len(proba_smooth), dtype=int)
+        long_gate = np.maximum(long_dynamic, 0.5 + (score_threshold * 0.5))
+        short_gate = np.minimum(short_dynamic, 0.5 - (score_threshold * 0.5))
+        signals[(proba_smooth >= long_gate) & (combined_score >= score_threshold)] = 1
+        signals[(proba_smooth <= short_gate) & (combined_score <= -score_threshold)] = -1
+
+        # Directional calibration on train fold: flip if historical edge is negative.
+        train_signals = np.zeros(len(train_proba), dtype=int)
+        train_signals[train_proba >= long_dynamic] = 1
+        train_signals[train_proba <= short_dynamic] = -1
+        if len(train_signals) > 2:
+            train_stabilized = train_signals.copy()
+            for j in range(2, len(train_signals)):
+                prev = train_stabilized[j - 1]
+                cand = train_signals[j]
+                if cand == prev:
+                    continue
+                if cand == 0:
+                    train_stabilized[j] = 0
+                    continue
+                if train_signals[j - 1] == cand and train_signals[j - 2] == cand:
+                    train_stabilized[j] = cand
+                else:
+                    train_stabilized[j] = prev
+            train_signals = train_stabilized
+
+        train_prices = train_df["close"].values.astype(float)
+        if len(train_prices) > 3:
+            train_rets = np.diff(train_prices) / (train_prices[:-1] + 1e-12)
+            train_delayed = np.roll(train_signals, 1)
+            train_delayed[0] = 0
+            train_active = train_delayed[:-1] != 0
+            if np.any(train_active):
+                train_edge = float(np.mean(train_rets[train_active] * train_delayed[:-1][train_active]))
+                if train_edge < 0:
+                    signals = -signals
+
+        # Regime agreement filter: avoid trading against multi-timeframe structure.
+        if "rg_tf_agreement" in test_df.columns:
+            tfa = np.sign(test_df["rg_tf_agreement"].values.astype(float))
+            signals[(signals > 0) & (tfa < 0)] = 0
+            signals[(signals < 0) & (tfa > 0)] = 0
+
+        # Noise filter: stand down during abrupt volatility regime transitions.
+        if "rg_vol_regime_change" in test_df.columns and "rg_vol_regime_change" in train_df.columns:
+            vol_gate = float(np.percentile(train_df["rg_vol_regime_change"].values.astype(float), 80))
+            signals[test_df["rg_vol_regime_change"].values.astype(float) > vol_gate] = 0
+
+        # Position hysteresis: require two consecutive bars before changing side.
+        if len(signals) > 2:
+            stabilized = signals.copy()
+            for j in range(2, len(signals)):
+                prev = stabilized[j - 1]
+                cand = signals[j]
+                if cand == prev:
+                    continue
+                if cand == 0:
+                    stabilized[j] = 0
+                    continue
+                if signals[j - 1] == cand and signals[j - 2] == cand:
+                    stabilized[j] = cand
+                else:
+                    stabilized[j] = prev
+            signals = stabilized
         y_pred = (proba > 0.5).astype(int)
 
         # Classification metrics
@@ -483,11 +623,46 @@ def walk_forward_alpha(
         position_changes = np.abs(np.diff(delayed_signals))
         position_changes = np.concatenate([[1 if delayed_signals[0] != 0 else 0], position_changes])
 
-        strategy_returns = returns * delayed_signals[:-1]
+        confidence_scale = np.clip(np.abs(combined_score[:-1]), 0.15, 1.0)
+        realized_vol = (
+            pd.Series(returns)
+            .rolling(24, min_periods=6)
+            .std()
+            .fillna(method="bfill")
+            .fillna(0.0)
+            .values
+        )
+        vol_target = 0.0015
+        vol_scale = np.where(realized_vol > 1e-8, np.clip(vol_target / realized_vol, 0.20, 2.0), 1.0)
+
+        position = delayed_signals[:-1].astype(float) * confidence_scale * vol_scale
+        strategy_returns = returns * position
 
         # Subtract transaction costs on position changes
         costs = position_changes[:-1] * total_cost_pct
         strategy_returns -= costs
+
+        # Stop/take-profit overlay with minimum 2:1 reward-to-risk clipping.
+        stop_band = np.clip((realized_vol * 2.4)[: len(strategy_returns)], 0.0010, 0.0080)
+        tp_band = stop_band * 2.0
+        strategy_returns = np.clip(strategy_returns, -stop_band, tp_band)
+
+        # Drawdown circuit breaker.
+        if len(strategy_returns) > 0:
+            gated = strategy_returns.copy()
+            eq_path = np.cumprod(1.0 + gated)
+            peak = np.maximum.accumulate(eq_path)
+            dd_path = (eq_path - peak) / (peak + 1e-12)
+            cooldown = 0
+            for j in range(len(gated)):
+                if cooldown > 0:
+                    gated[j] = 0.0
+                    cooldown -= 1
+                    continue
+                if dd_path[j] < -0.08:
+                    gated[j] = min(0.0, gated[j])
+                    cooldown = 24
+            strategy_returns = gated
 
         # Metrics
         if len(strategy_returns) > 0 and np.std(strategy_returns) > 0:
@@ -505,7 +680,6 @@ def walk_forward_alpha(
         max_dd = float(dd.min()) if len(dd) > 0 else 0.0
 
         # Trade count and win rate
-        trade_signals = delayed_signals[delayed_signals != 0]
         n_trades = int(np.sum(position_changes > 0))
 
         # Per-bar win rate when in a position

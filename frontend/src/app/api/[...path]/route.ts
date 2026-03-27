@@ -83,6 +83,12 @@ function resolveBackendBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
   if (configured) return configured.replace(/\/$/, "");
 
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "NEXT_PUBLIC_API_URL or NEXT_INTERNAL_API_URL must be set in production",
+    );
+  }
+
   // Local default for non-containerized development.
   return "http://127.0.0.1:8080";
 }

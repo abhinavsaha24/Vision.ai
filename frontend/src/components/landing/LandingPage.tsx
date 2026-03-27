@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { ParticleField } from "@/components/landing/ParticleField";
 import { AuthModal } from "@/components/landing/AuthModal";
+import { apiService } from "@/services/api";
 import { useAuthStore } from "@/store/authStore";
 
 /* ── Fade-up animation variants ── */
@@ -73,7 +74,7 @@ const VISION_ITEMS = [
 
 export function LandingPage() {
   const router = useRouter();
-  const { token, hydrated, hydrate } = useAuthStore();
+  const { token, hydrated, hydrate, setSession } = useAuthStore();
   const [authOpen, setAuthOpen] = useState(false);
 
   useEffect(() => {
@@ -81,10 +82,31 @@ export function LandingPage() {
   }, [hydrate]);
 
   useEffect(() => {
-    if (hydrated && token) {
+    if (!hydrated) return;
+    if (token) {
       router.replace("/dashboard");
+      return;
     }
-  }, [hydrated, token, router]);
+
+    let mounted = true;
+    apiService
+      .getMe()
+      .then((me) => {
+        if (!mounted) return;
+        setSession("session", {
+          email: String((me as { email?: string }).email || "user"),
+          role: String((me as { role?: string }).role || "user"),
+        });
+        router.replace("/dashboard");
+      })
+      .catch(() => {
+        // Not authenticated, keep landing page.
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [hydrated, router, setSession, token]);
 
   const handleAuthSuccess = () => {
     setAuthOpen(false);

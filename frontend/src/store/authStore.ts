@@ -2,29 +2,6 @@
 
 import { create } from "zustand";
 
-const TOKEN_KEY = "vision_ai_token";
-const TOKEN_COOKIE = "vision_ai_token";
-const TOKEN_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
-
-function setTokenCookie(token: string) {
-  if (typeof document === "undefined") return;
-  document.cookie = `${TOKEN_COOKIE}=${encodeURIComponent(token)}; path=/; max-age=${TOKEN_MAX_AGE_SECONDS}; samesite=lax`;
-}
-
-function clearTokenCookie() {
-  if (typeof document === "undefined") return;
-  document.cookie = `${TOKEN_COOKIE}=; path=/; max-age=0; samesite=lax`;
-}
-
-function readStoredToken(): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return window.localStorage.getItem(TOKEN_KEY);
-  } catch {
-    return null;
-  }
-}
-
 interface UserProfile {
   email: string;
   role: string;
@@ -46,31 +23,25 @@ export const useAuthStore = create<AuthState>((set) => ({
   hydrated: false,
   loginPending: false,
   hydrate: () => {
-    try {
-      const token = readStoredToken();
-      set({ token, hydrated: true });
-    } catch {
-      set({ token: null, hydrated: true });
-    }
+    set({ hydrated: true });
   },
   setSession: (token, user = null) => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(TOKEN_KEY, token);
-    }
-    setTokenCookie(token);
     set({ token, user, loginPending: false });
   },
   logout: () => {
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem(TOKEN_KEY);
-    }
-    clearTokenCookie();
     set({ token: null, user: null, loginPending: false });
   },
 }));
 
+function isLikelyJwtToken(token: string | null): token is string {
+  if (!token) return false;
+  const parts = token.split(".");
+  return parts.length === 3 && parts.every((part) => part.length > 0);
+}
+
 export function getAuthToken(): string | null {
-  return readStoredToken();
+  const token = useAuthStore.getState().token;
+  return isLikelyJwtToken(token) ? token : null;
 }
 
 export function bindAuthExpiryListener() {

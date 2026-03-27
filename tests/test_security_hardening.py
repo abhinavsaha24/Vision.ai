@@ -38,6 +38,30 @@ class _ConnExistingUser:
         self.committed = True
 
 
+class _CursorLoginUser:
+    def execute(self, _query: str, _params=None) -> None:
+        return None
+
+    def fetchone(self):
+        return (42, "hashed", "user", 1)
+
+
+class _ConnLoginUser:
+    def __init__(self) -> None:
+        self.cursor_obj = _CursorLoginUser()
+        self.committed = False
+        self.rolled_back = False
+
+    def cursor(self):
+        return self.cursor_obj
+
+    def commit(self) -> None:
+        self.committed = True
+
+    def rollback(self) -> None:
+        self.rolled_back = True
+
+
 class _WebSocketStub:
     def __init__(self, headers=None, cookies=None, query_params=None) -> None:
         self.headers = headers or {}
@@ -92,13 +116,65 @@ def test_signup_existing_user_returns_generic_success(monkeypatch) -> None:
 
     monkeypatch.setattr(auth_routes, "get_connection", lambda: conn)
     monkeypatch.setattr(auth_routes, "release_connection", lambda _conn: None)
+    monkeypatch.setattr(auth_routes.settings, "environment", "development")
 
     result = auth_routes.signup(
-        auth_routes.SignupRequest(email="existing@example.com", password="StrongPass123")
+        auth_routes.SignupRequest(email="existing@example.com", password="StrongPass123"),
+        _build_request("/auth/signup", "POST"),
     )
 
     assert result == {"status": "user created"}
-    assert conn.committed is False
+
+
+def test_signup_blocked_when_public_signup_disabled(monkeypatch) -> None:
+    monkeypatch.setattr(auth_routes.settings, "environment", "production")
+    monkeypatch.setattr(auth_routes.settings, "allow_public_signup", False)
+
+    try:
+        auth_routes.signup(
+            auth_routes.SignupRequest(email="new@example.com", password="StrongPass123"),
+            _build_request("/auth/signup", "POST"),
+        )
+        raise AssertionError("Expected signup block when disabled")
+    except HTTPException as exc:
+        assert exc.status_code == 403
+        assert "Public signup is disabled" in str(exc.detail)
+
+
+def test_login_lockout_after_repeated_failures(monkeypatch) -> None:
+    conn = _ConnLoginUser()
+    monkeypatch.setattr(auth_routes, "get_connection", lambda: conn)
+    monkeypatch.setattr(auth_routes, "release_connection", lambda _conn: None)
+    monkeypatch.setattr(auth_routes, "verify_password", lambda *_args, **_kwargs: False)
+    monkeypatch.setattr(auth_routes.settings, "auth_lockout_threshold", 2)
+    monkeypatch.setattr(auth_routes.settings, "auth_lockout_window_seconds", 300)
+    monkeypatch.setattr(auth_routes.settings, "auth_lockout_duration_seconds", 60)
+
+    auth_routes._FAILED_LOGIN_ATTEMPTS.clear()
+    auth_routes._LOGIN_LOCKED_UNTIL.clear()
+
+    req = auth_routes.LoginRequest(email="lock@example.com", password="WrongPass123")
+    request = _build_request("/auth/login", "POST", "10.1.1.10")
+
+    try:
+        auth_routes.login(req, request)
+        raise AssertionError("Expected first failure to be rejected")
+    except HTTPException as exc:
+        assert exc.status_code == 401
+
+    try:
+        auth_routes.login(req, request)
+        raise AssertionError("Expected lockout on threshold breach")
+    except HTTPException as exc:
+        assert exc.status_code == 429
+
+    auth_routes._FAILED_LOGIN_ATTEMPTS.clear()
+    auth_routes._LOGIN_LOCKED_UNTIL.clear()
+
+
+def test_google_route_absent_from_app() -> None:
+    paths = {getattr(route, "path", "") for route in main.app.routes}
+    assert "/auth/google" not in paths
 
 
 def test_extract_ws_token_precedence_header_over_all_sources() -> None:
@@ -193,6 +269,29 @@ def test_rate_limiter_keeps_higher_limit_non_auth_paths() -> None:
     assert fourth.status_code == 429
 
 
+def test_rate_limiter_applies_strict_limit_to_trading_paths() -> None:
+    middleware = RateLimiterMiddleware(
+        app=lambda *_args, **_kwargs: None,
+        max_requests=60,
+        auth_max_requests=12,
+        critical_max_requests=2,
+        window_seconds=60,
+    )
+
+    async def _call_next(_request: Request):
+        return Response(status_code=200)
+
+    req_trading = _build_request("/live-trading/enable", "POST")
+
+    first = asyncio.run(middleware.dispatch(req_trading, _call_next))
+    second = asyncio.run(middleware.dispatch(req_trading, _call_next))
+    third = asyncio.run(middleware.dispatch(req_trading, _call_next))
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert third.status_code == 429
+
+
 def test_stream_channel_rejects_missing_origin_when_required(monkeypatch) -> None:
     websocket = _WebSocketStub(headers={}, query_params={"token": "ignored"})
     monkeypatch.setattr(main.settings, "ws_require_origin_header", True)
@@ -251,6 +350,39 @@ def test_validate_security_blocks_query_token_fallback_in_production() -> None:
         raise AssertionError("Expected RuntimeError for production query-token fallback")
     except RuntimeError as exc:
         assert "WS_ALLOW_QUERY_TOKEN must be false in production" in str(exc)
+
+
+def test_validate_security_blocks_public_signup_in_production() -> None:
+    settings = core_config.Settings(
+        environment="production",
+        trading_mode="paper",
+        ws_allow_query_token=False,
+        ws_require_origin_header=True,
+        allow_public_signup=True,
+        jwt_secret="x" * 40,
+    )
+    try:
+        settings.validate_security()
+        raise AssertionError("Expected RuntimeError for production public signup")
+    except RuntimeError as exc:
+        assert "ALLOW_PUBLIC_SIGNUP must be false in production" in str(exc)
+
+
+def test_validate_security_blocks_insecure_cookie_override_in_production() -> None:
+    settings = core_config.Settings(
+        environment="production",
+        trading_mode="paper",
+        ws_allow_query_token=False,
+        ws_require_origin_header=True,
+        allow_public_signup=False,
+        session_cookie_secure=False,
+        jwt_secret="x" * 40,
+    )
+    try:
+        settings.validate_security()
+        raise AssertionError("Expected RuntimeError for insecure cookie override")
+    except RuntimeError as exc:
+        assert "SESSION_COOKIE_SECURE cannot be false in production" in str(exc)
 
 
 def test_validate_security_blocks_live_without_origin_enforcement() -> None:

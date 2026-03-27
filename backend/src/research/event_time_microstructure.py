@@ -16,8 +16,10 @@ class EventResearchConfig:
     min_event_samples: int = 200
     min_oos_samples: int = 120
     min_oos_t_stat: float = 2.0
+    min_oos_sharpe: float = 1.5
     min_oos_profit_factor: float = 1.2
-    horizons_ms: tuple[int, ...] = (10, 50, 100, 500)
+    horizons_ms: tuple[int, ...] = (100, 500, 1000, 5000, 30000)
+    eval_horizon_ms: int = 1000
     fee_bps: float = 0.9
     latency_penalty_bps: float = 0.8
     slippage_coef_bps: float = 2.2
@@ -59,6 +61,7 @@ class EventTimeMicrostructureEngine:
                 "win_rate": 0.0,
                 "profit_factor": 0.0,
                 "t_stat": 0.0,
+                "sharpe": 0.0,
             }
         wins = s[s > 0.0]
         losses = s[s < 0.0]
@@ -66,12 +69,14 @@ class EventTimeMicrostructureEngine:
         std = self._safe_std(s)
         pf = float(wins.sum() / abs(losses.sum())) if float(losses.sum()) != 0.0 else 10.0
         t_stat = float((expectancy / (std / np.sqrt(n))) if std > 1e-12 else 0.0)
+        sharpe = float((expectancy / std) * np.sqrt(max(1.0, float(n)))) if std > 1e-12 else 0.0
         return {
             "samples": float(n),
             "expectancy": expectancy,
             "win_rate": float((s > 0.0).mean()),
             "profit_factor": pf,
             "t_stat": t_stat,
+            "sharpe": sharpe,
         }
 
     @staticmethod
@@ -347,14 +352,26 @@ class EventTimeMicrostructureEngine:
         if frame_10ms.empty:
             return pd.DataFrame()
         f = frame_10ms.copy()
+        w = int(max(50, min(300, len(f) // 5)))
 
-        vol_z = ((f["trade_qty"] - f["trade_qty"].rolling(300).mean()) / f["trade_qty"].rolling(300).std().replace(0.0, np.nan)).replace([np.inf, -np.inf], np.nan).fillna(0.0)
+        vol_z = ((f["trade_qty"] - f["trade_qty"].rolling(w).mean()) / f["trade_qty"].rolling(w).std().replace(0.0, np.nan)).replace([np.inf, -np.inf], np.nan).fillna(0.0)
         abs_imb_delta = f["imbalance_delta"].abs()
+        abs_imb = f["imbalance"].abs()
         spread_move = f["spread_bps"].diff().fillna(0.0)
+        ofi = (f["signed_trade_qty"].fillna(0.0) + f["add_flow"].fillna(0.0) - f["cancel_flow"].fillna(0.0))
+        ofi_abs = ofi.abs()
+        cancel_dom = (f["cancel_flow"] - f["add_flow"]).fillna(0.0)
 
-        sweep = (f["sweep_flag"] > 0.0) & (f["cancel_flow"] > f["add_flow"]) & (abs_imb_delta > abs_imb_delta.rolling(300).quantile(0.92).fillna(0.0))
-        absorption = (vol_z > vol_z.quantile(0.95)) & (f["ret_ms"].abs() < f["ret_ms"].abs().rolling(300).quantile(0.50).fillna(0.0))
-        imbalance_shock = abs_imb_delta > abs_imb_delta.rolling(300).quantile(0.95).fillna(0.0)
+        q_imb90 = abs_imb_delta.rolling(w).quantile(0.90).fillna(abs_imb_delta.quantile(0.90))
+        q_imb95 = abs_imb_delta.rolling(w).quantile(0.95).fillna(abs_imb_delta.quantile(0.95))
+        q_absimb95 = abs_imb.rolling(w).quantile(0.95).fillna(abs_imb.quantile(0.95))
+        q_ofi95 = ofi_abs.rolling(w).quantile(0.95).fillna(ofi_abs.quantile(0.95))
+        q_cancel80 = cancel_dom.rolling(w).quantile(0.80).fillna(cancel_dom.quantile(0.80))
+
+        # Robust event definitions at short captures: quantile-based, but still tied to true OFI/queue/spread dynamics.
+        sweep = ((f["sweep_flag"] > 0.0) | (ofi_abs > q_ofi95)) & (cancel_dom > q_cancel80) & (abs_imb_delta > q_imb90)
+        absorption = (vol_z > vol_z.quantile(0.95)) & (f["ret_ms"].abs() < f["ret_ms"].abs().rolling(w).quantile(0.50).fillna(0.0))
+        imbalance_shock = (abs_imb_delta > q_imb95) | (abs_imb > q_absimb95)
         queue_collapse = (f["queue_collapse_flag"] > 0.0)
         refill_failure = (f["refill_failure_flag"] > 0.0)
         spread_wide_threshold = float(spread_move.quantile(0.95))
@@ -452,10 +469,17 @@ class EventTimeMicrostructureEngine:
             cost_bps = float((spread * 0.5) + self.config.fee_bps + self.config.latency_penalty_bps + slippage_bps)
             out.at[idx, "cost_bps"] = cost_bps
 
-        out["gross_ret"] = out["event_sign"] * out["ret_100ms"]
+        eval_h = int(self.config.eval_horizon_ms)
+        eval_col = f"ret_{eval_h}ms"
+        if eval_col not in out.columns:
+            known = [int(h) for h in self.config.horizons_ms]
+            fallback_h = min(known, key=lambda h: abs(h - eval_h)) if known else 100
+            eval_col = f"ret_{fallback_h}ms"
+
+        out["gross_ret"] = out["event_sign"] * out[eval_col]
         out["net_ret"] = out["gross_ret"] - (out["cost_bps"] / 10000.0)
-        out["continuation_flag"] = ((out["event_sign"] * out["ret_100ms"]) > 0.0)
-        out["reversal_flag"] = ((out["event_sign"] * out["ret_100ms"]) < 0.0)
+        out["continuation_flag"] = ((out["event_sign"] * out[eval_col]) > 0.0)
+        out["reversal_flag"] = ((out["event_sign"] * out[eval_col]) < 0.0)
 
         decay_speed = []
         for _, row in out.iterrows():
@@ -794,6 +818,8 @@ class EventTimeMicrostructureEngine:
                 reasons.append("non_positive_oos_expectancy")
             if float(oos_stats["t_stat"]) < max(self.config.min_oos_t_stat, self._strict.min_oos_t_stat):
                 reasons.append("weak_oos_t_stat")
+            if float(oos_stats.get("sharpe", 0.0)) < float(self.config.min_oos_sharpe):
+                reasons.append("weak_oos_sharpe")
             if float(oos_stats["profit_factor"]) < max(self.config.min_oos_profit_factor, self._strict.min_oos_profit_factor):
                 reasons.append("weak_oos_profit_factor")
             if len(per_symbol) < max(2, self._strict.min_assets_required):

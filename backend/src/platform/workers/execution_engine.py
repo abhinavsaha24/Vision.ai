@@ -8,16 +8,18 @@ from uuid import uuid4
 
 from backend.src.platform.config import settings
 from backend.src.platform.db import Database
+from backend.src.platform.event_bus import create_event_bus
 from backend.src.platform.events import EventType, TradingEvent
 from backend.src.platform.logging import setup_structured_logging
 from backend.src.platform.observability import increment_error, increment_metric
-from backend.src.platform.queue import RedisStreamQueue
 from backend.src.platform.repository import (
+    claim_execution_idempotency,
     ensure_schema,
     get_latest_portfolio,
     insert_order,
     insert_portfolio_snapshot,
     insert_trade,
+    mark_execution_idempotency,
     persist_event,
 )
 
@@ -28,7 +30,7 @@ class ExecutionEngineWorker:
     def __init__(self, consumer_name: str):
         self.consumer_name = consumer_name
         self.db = Database(settings.database_url_value)
-        self.queue = RedisStreamQueue(settings.redis_url)
+        self.queue = create_event_bus()
         self.running = True
 
     def _place_order_with_retry(self, event: TradingEvent) -> tuple[bool, str]:
@@ -66,7 +68,7 @@ class ExecutionEngineWorker:
         logger.info("execution_engine_started")
         while self.running:
             records = self.queue.consume_group(
-                stream="events.execution",
+                topic="events.execution",
                 group="execution-engine",
                 consumer=self.consumer_name,
                 count=50,
@@ -82,6 +84,22 @@ class ExecutionEngineWorker:
                     increment_metric(self.queue, "execution_events_received")
 
                     if event.event_type != EventType.SIGNAL_APPROVED:
+                        ack_ids.append(message_id)
+                        continue
+
+                    execution_key = event.idempotency_key or event.event_id
+                    claimed, existing = claim_execution_idempotency(
+                        self.db,
+                        idempotency_key=execution_key,
+                        source_event_id=event.event_id,
+                    )
+                    if not claimed:
+                        logger.info(
+                            "pipeline_stage stage=execution_duplicate_ignored event_id=%s idempotency_key=%s status=%s",
+                            event.event_id,
+                            execution_key,
+                            existing,
+                        )
                         ack_ids.append(message_id)
                         continue
 
@@ -112,6 +130,12 @@ class ExecutionEngineWorker:
                     )
                     self.queue.publish("events.execution", out_event.to_dict())
                     persist_event(self.db, out_event.to_dict())
+                    mark_execution_idempotency(
+                        self.db,
+                        idempotency_key=execution_key,
+                        status="filled" if ok else "failed",
+                        order_id=order_id or None,
+                    )
                     logger.info(
                         "pipeline_stage stage=trade_executed event_id=%s parent_event_id=%s status=%s reason=%s",
                         out_event.event_id,

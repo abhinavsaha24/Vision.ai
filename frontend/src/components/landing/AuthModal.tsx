@@ -64,27 +64,23 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
         await apiService.signup(email, password);
         setSuccess("Account created. Signing you in...");
         // Auto-login after signup
-        const data = await apiService.login(email, password);
-        const tokenValue = data.access_token || data.token;
-        if (!tokenValue) throw new Error("Token missing in login response");
-        const me = (await apiService.getMeWithToken(tokenValue)) as {
+        await apiService.login(email, password);
+        const me = (await apiService.getMe()) as {
           email?: string;
           role?: string;
         };
-        setSession(tokenValue, {
+        setSession("session", {
           email: me?.email || email,
           role: me?.role || "user",
         });
         setTimeout(onSuccess, 500);
       } else {
-        const data = await apiService.login(email, password);
-        const tokenValue = data.access_token || data.token;
-        if (!tokenValue) throw new Error("Token missing in login response");
-        const me = (await apiService.getMeWithToken(tokenValue)) as {
+        await apiService.login(email, password);
+        const me = (await apiService.getMe()) as {
           email?: string;
           role?: string;
         };
-        setSession(tokenValue, {
+        setSession("session", {
           email: me?.email || email,
           role: me?.role || "user",
         });

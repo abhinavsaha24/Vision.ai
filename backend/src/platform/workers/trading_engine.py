@@ -7,11 +7,11 @@ from uuid import uuid4
 from backend.src.platform.config import settings
 from backend.src.platform.alpha_engine import AlphaEngine
 from backend.src.platform.db import Database
+from backend.src.platform.event_bus import create_event_bus
 from backend.src.platform.events import EventType, TradingEvent
 from backend.src.platform.logging import setup_structured_logging
 from backend.src.platform.observability import increment_error, increment_metric
 from backend.src.platform.portfolio_allocator import AllocationInput, PortfolioAllocator
-from backend.src.platform.queue import RedisStreamQueue
 from backend.src.platform.repository import (
     ensure_schema,
     get_latest_portfolio,
@@ -19,6 +19,7 @@ from backend.src.platform.repository import (
     is_strategy_enabled,
     persist_event,
 )
+from backend.src.platform.signal_orchestrator import SignalOrchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +28,9 @@ class TradingEngineWorker:
     def __init__(self, consumer_name: str):
         self.consumer_name = consumer_name
         self.db = Database(settings.database_url_value)
-        self.queue = RedisStreamQueue(settings.redis_url)
+        self.queue = create_event_bus()
         self.alpha_engine = AlphaEngine()
+        self.signal_orchestrator = SignalOrchestrator()
         self.allocator = PortfolioAllocator()
         self.running = True
         self._market_tick_counter = 0
@@ -116,7 +118,7 @@ class TradingEngineWorker:
         logger.info("trading_engine_started")
         while self.running:
             records = self.queue.consume_group(
-                stream="events.trading",
+                topic="events.trading",
                 group="trading-engine",
                 consumer=self.consumer_name,
                 count=50,
@@ -153,6 +155,16 @@ class TradingEngineWorker:
                         alpha_signal = self.alpha_engine.on_tick(event.payload, strategy_name)
                         signal: TradingEvent | None = None
                         if alpha_signal is not None:
+                            orchestrated = self.signal_orchestrator.evaluate(event.payload, alpha_signal)
+                            if not orchestrated.get("approved", False):
+                                logger.info(
+                                    "pipeline_stage stage=signal_orchestrator_reject event_id=%s unified_score=%s",
+                                    event.event_id,
+                                    orchestrated.get("unified_score"),
+                                )
+                                ack_ids.append(message_id)
+                                continue
+
                             latest_portfolio = get_latest_portfolio(self.db)
                             deployable_notional = min(
                                 float(latest_portfolio.get("cash", 0.0) or 0.0),
@@ -182,7 +194,12 @@ class TradingEngineWorker:
                                 base_fraction = float(alpha_signal.get("position_fraction", 0.0) or 0.0)
                             except (TypeError, ValueError):
                                 base_fraction = 0.0
-                            position_fraction = max(0.0, abs(target_exposure) * base_fraction)
+                            position_fraction = max(
+                                0.0,
+                                abs(target_exposure)
+                                * base_fraction
+                                * float(orchestrated.get("unified_score", 0.0) or 0.0),
+                            )
                             notional = max(0.0, deployable_notional * position_fraction)
                             try:
                                 price = float(alpha_signal.get("price", 0.0) or 0.0)
@@ -220,6 +237,8 @@ class TradingEngineWorker:
                                             "positions": allocation.positions,
                                             "meta": allocation.meta,
                                         },
+                                        "unified_score": float(orchestrated.get("unified_score", 0.0) or 0.0),
+                                        "signal_orchestrator": orchestrated,
                                     },
                                     source="trading-engine",
                                     idempotency_key=(

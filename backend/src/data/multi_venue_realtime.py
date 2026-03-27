@@ -20,8 +20,8 @@ if __package__ is None or __package__ == "":
 
 from backend.src.data.microstructure_store import MicrostructureParquetStore
 from backend.src.data.venue_adapters import NormalizedOrderBook, NormalizedTrade, VenueAdapter, build_adapter
+from backend.src.platform.event_bus import create_event_bus
 from backend.src.platform.events import EventType, TradingEvent
-from backend.src.platform.queue import RedisStreamQueue
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,8 @@ class IngestionStats:
 
 class MarketEventPublisher:
     def __init__(self, redis_url: str, strategy_name: str = "default", publish_interval_ms: int = 1000):
-        self.queue = RedisStreamQueue(redis_url)
+        _ = redis_url
+        self.queue = create_event_bus()
         self.strategy_name = strategy_name
         self.publish_interval_ms = max(100, int(publish_interval_ms))
         self._last_published_ms: dict[str, int] = {}

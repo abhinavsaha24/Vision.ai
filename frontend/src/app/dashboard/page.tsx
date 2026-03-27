@@ -4,15 +4,21 @@ import { useRouter } from "next/navigation";
 import { AuthGuard } from "@/components/dashboard/auth-guard";
 import { GlobalErrorBoundary } from "@/components/system/global-error-boundary";
 import { InstitutionalTerminal } from "@/components/dashboard/institutional-terminal";
+import { apiService } from "@/services/api";
 import { useAuthStore } from "@/store/authStore";
 
 export default function DashboardPage() {
   const router = useRouter();
   const logout = useAuthStore((state) => state.logout);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (!window.confirm("Are you sure you want to log out?")) {
       return;
+    }
+    try {
+      await apiService.logout();
+    } catch {
+      // Continue with local logout even if backend logout fails.
     }
     logout();
     router.replace("/login");

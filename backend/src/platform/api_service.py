@@ -11,10 +11,11 @@ from pydantic import BaseModel, Field
 
 from backend.src.platform.config import settings
 from backend.src.platform.db import Database
+from backend.src.platform.event_bus import create_event_bus
+from backend.src.platform.event_bus.bus import EventBus
 from backend.src.platform.events import EventType, TradingEvent
 from backend.src.platform.logging import setup_structured_logging
 from backend.src.platform.observability import metrics_snapshot
-from backend.src.platform.queue import RedisStreamQueue
 from backend.src.platform.repository import (
     ensure_schema,
     get_pipeline_counts,
@@ -42,7 +43,7 @@ async def lifespan(app: FastAPI):
     setup_structured_logging(settings.log_level)
     logger.info("startup_environment_validated diagnostics=%s", settings.startup_diagnostics())
     db = Database(settings.database_url_value)
-    queue = RedisStreamQueue(settings.redis_url)
+    queue = create_event_bus()
 
     try:
         ensure_schema(db)
@@ -80,7 +81,7 @@ def _db(request: Request) -> Database:
     return request.app.state.db
 
 
-def _queue(request: Request) -> RedisStreamQueue:
+def _bus(request: Request) -> EventBus:
     return request.app.state.queue
 
 
@@ -149,7 +150,7 @@ def _persist_event_to_outbox(db: Database, event: TradingEvent, stream: str) -> 
             )
 
 
-def _flush_outbox(db: Database, queue: RedisStreamQueue, max_rows: int = 100) -> int:
+def _flush_outbox(db: Database, queue: EventBus, max_rows: int = 100) -> int:
     with db.connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -223,7 +224,7 @@ def health() -> dict[str, str]:
 @app.get("/health/ready")
 def health_ready(request: Request) -> dict[str, str]:
     db = _db(request)
-    queue = _queue(request)
+    queue = _bus(request)
     row = db.fetchone("SELECT 1")
     if row is None:
         raise HTTPException(status_code=503, detail="database_not_ready")
@@ -235,19 +236,22 @@ def health_ready(request: Request) -> dict[str, str]:
 @app.get("/health/deep")
 def health_deep(request: Request) -> dict:
     db = _db(request)
-    queue = _queue(request)
+    queue = _bus(request)
 
     db_ready = db.fetchone("SELECT 1") is not None
     redis_ready = queue.readiness_probe()
 
     groups_ok = True
     group_details: dict[str, object] = {}
-    try:
-        group_details["events.trading"] = queue.client.xinfo_groups("events.trading")
-        group_details["events.execution"] = queue.client.xinfo_groups("events.execution")
-    except Exception as exc:
-        groups_ok = False
-        group_details["error"] = str(exc)
+    if hasattr(queue, "client"):
+        try:
+            group_details["events.trading"] = queue.client.xinfo_groups("events.trading")
+            group_details["events.execution"] = queue.client.xinfo_groups("events.execution")
+        except Exception as exc:
+            groups_ok = False
+            group_details["error"] = str(exc)
+    else:
+        group_details["info"] = "consumer-group details are backend-specific"
 
     counts = get_pipeline_counts(db)
     metrics = metrics_snapshot(queue)
@@ -268,7 +272,7 @@ def health_deep(request: Request) -> dict:
 
 @app.get("/metrics")
 def metrics(request: Request) -> dict:
-    queue = _queue(request)
+    queue = _bus(request)
     db = _db(request)
     return {
         "metrics": metrics_snapshot(queue),
@@ -279,7 +283,7 @@ def metrics(request: Request) -> dict:
 @app.post("/strategy/start")
 def start_strategy(payload: StrategyControlRequest, request: Request) -> dict[str, str]:
     db = _db(request)
-    queue = _queue(request)
+    queue = _bus(request)
 
     event = TradingEvent(
         event_type=EventType.STRATEGY_START,
@@ -295,7 +299,7 @@ def start_strategy(payload: StrategyControlRequest, request: Request) -> dict[st
 @app.post("/strategy/stop")
 def stop_strategy(payload: StrategyControlRequest, request: Request) -> dict[str, str]:
     db = _db(request)
-    queue = _queue(request)
+    queue = _bus(request)
 
     event = TradingEvent(
         event_type=EventType.STRATEGY_STOP,
@@ -317,7 +321,7 @@ def strategy_status(strategy_name: str, request: Request) -> dict[str, bool | st
 @app.post("/events/market")
 def publish_market_tick(payload: MarketTickRequest, request: Request) -> dict[str, str]:
     db = _db(request)
-    queue = _queue(request)
+    queue = _bus(request)
 
     event = TradingEvent(
         event_type=EventType.MARKET_TICK,

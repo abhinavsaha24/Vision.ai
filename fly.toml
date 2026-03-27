@@ -5,7 +5,13 @@ primary_region = "iad"
   dockerfile = "deployment/Dockerfile.quant"
 
 [env]
+  ENVIRONMENT = "production"
   LOG_LEVEL = "INFO"
+  SESSION_COOKIE_SECURE = "true"
+  ALLOW_PUBLIC_SIGNUP = "false"
+  AUTH_LOCKOUT_THRESHOLD = "5"
+  AUTH_LOCKOUT_WINDOW_SECONDS = "300"
+  AUTH_LOCKOUT_DURATION_SECONDS = "900"
   WS_REQUIRE_ORIGIN_HEADER = "true"
   WS_ALLOW_QUERY_TOKEN = "false"
 

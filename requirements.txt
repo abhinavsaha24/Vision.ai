@@ -12,12 +12,14 @@ python-dotenv==1.2.2
 # Database & Storage
 psycopg2-binary>=2.9.0
 redis>=5.0
+kafka-python>=2.1.0
 
 # Security & Auth
 passlib[bcrypt]
 PyJWT>=2.10
 cryptography==46.0.5
 email-validator
+pyotp>=2.9
 
 # Data Science & ML
 pandas==2.3.3

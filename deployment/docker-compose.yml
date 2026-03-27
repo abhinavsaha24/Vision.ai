@@ -15,6 +15,12 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - REDIS_ENABLED=true
       - REDIS_TTL=30
+      - ALLOW_PUBLIC_SIGNUP=false
+      - AUTH_LOCKOUT_THRESHOLD=5
+      - AUTH_LOCKOUT_WINDOW_SECONDS=300
+      - AUTH_LOCKOUT_DURATION_SECONDS=900
+      - WS_REQUIRE_ORIGIN_HEADER=true
+      - WS_ALLOW_QUERY_TOKEN=false
     depends_on:
       - redis
       - db

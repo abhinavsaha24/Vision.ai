@@ -23,7 +23,9 @@ def main() -> None:
     parser.add_argument("--min-event-samples", type=int, default=200)
     parser.add_argument("--min-oos-samples", type=int, default=120)
     parser.add_argument("--min-oos-t-stat", type=float, default=2.0)
+    parser.add_argument("--min-oos-sharpe", type=float, default=1.5)
     parser.add_argument("--min-oos-profit-factor", type=float, default=1.2)
+    parser.add_argument("--eval-horizon-ms", type=int, default=1000)
     parser.add_argument("--fee-bps", type=float, default=0.9)
     parser.add_argument("--latency-penalty-bps", type=float, default=0.8)
     parser.add_argument("--slippage-coef-bps", type=float, default=2.2)
@@ -43,7 +45,9 @@ def main() -> None:
             min_event_samples=int(args.min_event_samples),
             min_oos_samples=int(args.min_oos_samples),
             min_oos_t_stat=float(args.min_oos_t_stat),
+            min_oos_sharpe=float(args.min_oos_sharpe),
             min_oos_profit_factor=float(args.min_oos_profit_factor),
+            eval_horizon_ms=int(args.eval_horizon_ms),
             fee_bps=float(args.fee_bps),
             latency_penalty_bps=float(args.latency_penalty_bps),
             slippage_coef_bps=float(args.slippage_coef_bps),

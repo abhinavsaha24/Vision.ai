@@ -7,10 +7,10 @@ from uuid import uuid4
 
 from backend.src.platform.config import settings
 from backend.src.platform.db import Database
+from backend.src.platform.event_bus import create_event_bus
 from backend.src.platform.events import EventType, TradingEvent
 from backend.src.platform.logging import setup_structured_logging
 from backend.src.platform.observability import increment_error, increment_metric
-from backend.src.platform.queue import RedisStreamQueue
 from backend.src.platform.repository import ensure_schema, get_current_drawdown_pct, get_latest_portfolio, persist_event
 from backend.src.platform.risk_policy import RiskPolicy
 
@@ -21,7 +21,7 @@ class RiskEngineWorker:
     def __init__(self, consumer_name: str):
         self.consumer_name = consumer_name
         self.db = Database(settings.database_url_value)
-        self.queue = RedisStreamQueue(settings.redis_url)
+        self.queue = create_event_bus()
         self.policy = RiskPolicy(
             max_position_size=settings.max_position_size,
             max_notional_exposure=settings.max_notional_exposure,
@@ -37,7 +37,7 @@ class RiskEngineWorker:
         logger.info("risk_engine_started")
         while self.running:
             records = self.queue.consume_group(
-                stream="events.trading",
+                topic="events.trading",
                 group="risk-engine",
                 consumer=self.consumer_name,
                 count=50,

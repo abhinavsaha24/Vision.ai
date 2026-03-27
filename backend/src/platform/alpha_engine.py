@@ -79,6 +79,7 @@ class AlphaEngine:
         min_hours_between_trades: int = 1,
         weak_tier_max_cap: float = 0.05,
         edge_registry_path: str | None = None,
+        require_edge_registry: bool = True,
     ):
         self.meta_alpha = MetaAlphaEngine(
             trend_entry_threshold=trend_entry_threshold,
@@ -106,6 +107,7 @@ class AlphaEngine:
         self.max_trades_24h = max(1, int(max_trades_24h))
         self.min_hours_between_trades = max(0, int(min_hours_between_trades))
         self.weak_tier_max_cap = float(np.clip(weak_tier_max_cap, 0.01, 0.08))
+        self.require_edge_registry = bool(require_edge_registry)
         self._load_registry_snapshot()
 
     def _load_registry_snapshot(self) -> None:
@@ -240,6 +242,16 @@ class AlphaEngine:
         return "range"
 
     def _passes_global_edge_filter(self, filtered_scores: dict[str, float]) -> bool:
+        if not self._edge_stats and not self.require_edge_registry:
+            flow = float(filtered_scores.get("flow_context_edge", 0.0) or 0.0)
+            structure = float(filtered_scores.get("price_structure", 0.0) or 0.0)
+            volatility = float(filtered_scores.get("volatility_transition", 0.0) or 0.0)
+            if abs(flow) < 0.04 and abs(structure) < 0.06:
+                return False
+            if abs(volatility) > 0.85 and abs(structure) < 0.18:
+                return False
+            return True
+
         if self._last_live_edge_stat is not None:
             s = self._last_live_edge_stat
             return bool(s.expectancy > 0.0 and s.profit_factor > 1.2 and s.t_stat > 1.5 and s.trades > 50)
@@ -305,6 +317,12 @@ class AlphaEngine:
                 continue
             weighted.append((abs(float(score)), float(stat.expectancy)))
         if not weighted:
+            if not self.require_edge_registry:
+                flow = abs(float(filtered_scores.get("flow_context_edge", 0.0) or 0.0))
+                structure = abs(float(filtered_scores.get("price_structure", 0.0) or 0.0))
+                volatility = abs(float(filtered_scores.get("volatility_transition", 0.0) or 0.0))
+                proxy = (flow * 0.0009) + (structure * 0.0006) - (volatility * 0.0002)
+                return float(max(0.0, proxy))
             return 0.0
         denom = sum(w for w, _ in weighted)
         if denom <= 0:
@@ -505,12 +523,29 @@ class AlphaEngine:
             self._bars_since_registry_reload = 0
 
         if not self._runtime_registry:
-            return None
+            if self.require_edge_registry:
+                return None
 
         signal_scores = self._compute_signal_scores(df1h, df4h)
 
         if self._last_live_edge is None:
-            return None
+            if self.require_edge_registry:
+                return None
+            fallback_expectancy = max(
+                0.0001,
+                abs(float(signal_scores.get("flow_context_edge", 0.0) or 0.0)) * 0.001,
+            )
+            self._last_live_edge = "fallback_meta_edge"
+            self._last_live_edge_stat = EdgeStat(
+                name=self._last_live_edge,
+                trades=150,
+                expectancy=fallback_expectancy,
+                win_rate=0.52,
+                profit_factor=1.08,
+                t_stat=1.2,
+                passed=True,
+                selection="fallback",
+            )
 
         filtered_scores: dict[str, float] = dict(signal_scores)
 
@@ -536,8 +571,15 @@ class AlphaEngine:
 
         # Hard flow gate: no trades when flow and structure do not agree.
         flow_ok, flow_reason = self._flow_confirmation(meta)
-        if not flow_ok:
-            return None
+        if self.require_edge_registry:
+            if not flow_ok:
+                return None
+        else:
+            flow_score = float(meta.get("flow_score", 0.0) or 0.0)
+            if side == "long" and flow_score < -0.05:
+                return None
+            if side == "short" and flow_score > 0.05:
+                return None
 
         # Global statistical veto: never enter with non-positive weighted expectancy.
         if signal_expectancy <= max(0.0, self.edge_min_expectancy):

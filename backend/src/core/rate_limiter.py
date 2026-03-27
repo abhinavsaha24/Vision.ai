@@ -35,6 +35,7 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
         max_requests: int = 60,
         window_seconds: int = 60,
         auth_max_requests: int = 12,
+        critical_max_requests: int = 3,
         exclude_paths: tuple = (
             "/health",
             "/health/detailed",
@@ -46,6 +47,7 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.max_requests = max_requests
         self.auth_max_requests = auth_max_requests
+        self.critical_max_requests = critical_max_requests
         self.window_seconds = window_seconds
         self.exclude_paths = exclude_paths
 
@@ -82,7 +84,9 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
             key = (client_ip, path_prefix)
 
             effective_limit = self.max_requests
-            if path.startswith("/auth/"):
+            if path.startswith(("/live-trading/", "/trading/", "/emergency/")):
+                effective_limit = self.critical_max_requests
+            elif path.startswith("/auth/"):
                 effective_limit = self.auth_max_requests
 
             now = time.time()
