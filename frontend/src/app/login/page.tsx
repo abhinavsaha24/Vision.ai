@@ -78,23 +78,23 @@ export default function LoginPage() {
       if (mode === "signup") {
         await apiService.signup(email, password);
         setSuccess("Account created successfully. Signing in...");
-        await apiService.login(email, password);
-        const me = (await apiService.getMe()) as {
+        const res = await apiService.login(email, password);
+        const me = (await apiService.getMeWithToken(String(res.access_token || res.token || ""))) as {
           email?: string;
           role?: string;
         };
-        setSession("session", {
+        setSession(res.access_token || res.token || "session", {
           email: me?.email || email,
           role: me?.role || "user",
         });
         router.push("/dashboard");
       } else {
-        await apiService.login(email, password);
-        const me = (await apiService.getMe()) as {
+        const res = await apiService.login(email, password);
+        const me = (await apiService.getMeWithToken(String(res.access_token || res.token || ""))) as {
           email?: string;
           role?: string;
         };
-        setSession("session", {
+        setSession(res.access_token || res.token || "session", {
           email: me?.email || email,
           role: me?.role || "user",
         });

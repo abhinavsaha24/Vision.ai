@@ -1,9 +1,0 @@
-
-[*********************100%***********************]  1 of 1 completed
-=== SIMPLE EDGE REPORT ===
-{
-  "status": "FAILURE",
-  "reason": "no_statistically_valid_simple_edge_found",
-  "test_metrics": {},
-  "edge_spec": {}
-}

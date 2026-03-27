@@ -408,6 +408,7 @@ def test_validate_security_accepts_secure_live_configuration() -> None:
         trading_mode="live",
         ws_allow_query_token=False,
         ws_require_origin_header=True,
+        session_cookie_secure=True,
         jwt_secret="x" * 40,
         binance_api_key="key",
         binance_secret="secret",
@@ -594,9 +595,10 @@ def test_emergency_kill_and_reset_toggle_risk_manager(monkeypatch) -> None:
     req = _build_api_request_with_services(services)
 
     monkeypatch.setattr(main, "_audit_action", lambda **_kwargs: None)
+    monkeypatch.setattr(main, "is_dual_approval_satisfied", lambda _action, _target: True)
 
-    kill_result = asyncio.run(main.emergency_kill(req, "incident_test", {"user_id": 9}))
-    reset_result = asyncio.run(main.emergency_kill_reset(req, {"user_id": 9}))
+    kill_result = asyncio.run(main.emergency_kill(req, "incident_test", {"user_id": 9, "role": "admin"}))
+    reset_result = asyncio.run(main.emergency_kill_reset(req, {"user_id": 9, "role": "admin"}))
 
     assert kill_result["status"] == "kill_switch_activated"
     assert kill_result["cancelled_orders"] == 3

@@ -32,8 +32,15 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
+  const url = String(config.url || "");
+  const isAuthStart = url.includes("/auth/login") || url.includes("/auth/signup") || url.includes("/auth/register");
+
   const token = getAuthToken();
-  if (token && token.split(".").length === 3) {
+  const hasAuthHeader = config.headers && typeof config.headers.has === "function" 
+    ? config.headers.has("Authorization") 
+    : !!(config.headers as any)?.Authorization || !!(config.headers as any)?.authorization;
+
+  if (!isAuthStart && token && token.split(".").length === 3 && !hasAuthHeader) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 

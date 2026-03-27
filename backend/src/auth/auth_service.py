@@ -155,6 +155,12 @@ async def get_current_user(
     header_token = credentials.credentials if credentials is not None else None
     cookie_token = (request.cookies.get(settings.session_cookie_name) or "").strip() or None
 
+    logger.info(f"DEBUG: get_current_user path={request.url.path}")
+    logger.info(f"DEBUG: Request Headers Authorization: {request.headers.get('Authorization')}")
+    logger.info(f"DEBUG: Request Cookies: {request.cookies}")
+    logger.info(f"DEBUG: header_token: {header_token}")
+    logger.info(f"DEBUG: cookie_token: {cookie_token}")
+
     token = header_token or cookie_token
 
     if token is None:
@@ -170,6 +176,7 @@ async def get_current_user(
         payload = decode_token(cookie_token)
 
     if payload is None:
+        logger.warning(f"Failed to decode token. header_token={header_token}, cookie_token={cookie_token}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",

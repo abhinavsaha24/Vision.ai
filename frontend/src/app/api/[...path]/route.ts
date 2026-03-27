@@ -194,9 +194,19 @@ async function proxy(req: NextRequest, params: { path: string[] }) {
 
   const downstreamHeaders = new Headers();
   response.headers.forEach((value, key) => {
-    if (HOP_BY_HOP_HEADERS.has(key.toLowerCase())) return;
+    const lowerKey = key.toLowerCase();
+    if (HOP_BY_HOP_HEADERS.has(lowerKey)) return;
+    if (lowerKey === "set-cookie") return; // Manually handled
     downstreamHeaders.set(key, value);
   });
+
+  const setCookies = response.headers.getSetCookie 
+    ? response.headers.getSetCookie() 
+    : [];
+    
+  for (const cookie of setCookies) {
+    downstreamHeaders.append("set-cookie", cookie);
+  }
 
   return new Response(response.body, {
     status: response.status,
